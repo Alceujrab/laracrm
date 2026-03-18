@@ -1,18 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { Briefcase, CheckSquare, Users, Award, Target, Plus, MoreHorizontal, Filter, Search, Calendar } from 'lucide-react';
 import Contatos from './Tabs/Contatos';
+import Sortable from 'sortablejs';
 
 export default function CRMIndex({ stages = [] }) {
     const [activeTab, setActiveTab] = useState('negociacoes');
-    const [localStages, setLocalStages] = useState(stages);
-    const [draggingDeal, setDraggingDeal] = useState(null);
-
-    // Sync state if props change
-    React.useEffect(() => {
-        setLocalStages(stages);
-    }, [stages]);
+    const containerRefs = useRef([]);
+    const sortablesRefs = useRef([]);
 
     const crmMenu = [
         { label: 'Negociações', icon: Briefcase, active: activeTab === 'negociacoes', id: 'negociacoes' },
@@ -32,68 +28,43 @@ export default function CRMIndex({ stages = [] }) {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
     };
 
-    // Native HTML5 Drag and Drop Handlers
-    const handleDragStart = (e, deal, sourceStageId) => {
-        setDraggingDeal(deal.id);
-        e.dataTransfer.effectAllowed = 'move';
-        // Some browsers require data to be set
-        e.dataTransfer.setData('text/plain', JSON.stringify({ dealId: deal.id, sourceStageId: sourceStageId }));
-    };
+    useEffect(() => {
+        if (activeTab !== 'negociacoes') return;
 
-    const handleDragEnd = () => {
-        setDraggingDeal(null);
-    };
-
-    const handleDragOver = (e) => {
-        e.preventDefault();
-        e.dataTransfer.dropEffect = 'move';
-    };
-
-    const handleDrop = (e, destStageId) => {
-        e.preventDefault();
-        setDraggingDeal(null);
-
-        const dataStr = e.dataTransfer.getData('text/plain');
-        if (!dataStr) return;
-        
-        try {
-            const { dealId, sourceStageId } = JSON.parse(dataStr);
-            
-            if (sourceStageId.toString() === destStageId.toString()) return;
-
-            // Optimistic update
-            let movedDeal = null;
-            const newStages = localStages.map(stage => {
-                if (stage.id.toString() === sourceStageId.toString()) {
-                    const clonedDeals = [...(stage.deals || [])];
-                    const index = clonedDeals.findIndex(d => d.id === dealId);
-                    if (index > -1) {
-                        movedDeal = clonedDeals.splice(index, 1)[0];
-                        return { ...stage, deals: clonedDeals };
-                    }
+        // Initialize Sortable on every container
+        containerRefs.current.forEach((container, index) => {
+            if (container) {
+                // Destroy old instance if exists
+                if (sortablesRefs.current[index]) {
+                    sortablesRefs.current[index].destroy();
                 }
-                return stage;
-            });
 
-            if (movedDeal) {
-                const finalStages = newStages.map(stage => {
-                    if (stage.id.toString() === destStageId.toString()) {
-                        return { ...stage, deals: [...(stage.deals || []), movedDeal] };
+                sortablesRefs.current[index] = new Sortable(container, {
+                    group: 'shared-deals',
+                    animation: 150,
+                    ghostClass: 'opacity-50',
+                    dragClass: 'shadow-2xl',
+                    onEnd: (evt) => {
+                        const itemEl = evt.item;
+                        const dealId = itemEl.dataset.dealId;
+                        const destStageId = evt.to.dataset.stageId;
+                        const sourceStageId = evt.from.dataset.stageId;
+
+                        if (sourceStageId !== destStageId && dealId && destStageId) {
+                            // Sync API - Sortable already moved the DOM element
+                            router.put(route('crm.deals.move', { deal: dealId }), {
+                                deal_stage_id: destStageId
+                            }, { preserveScroll: true, preserveState: false });
+                        }
                     }
-                    return stage;
                 });
-                
-                setLocalStages(finalStages);
-
-                // API Sync
-                router.put(route('crm.deals.move', { deal: movedDeal.id }), {
-                    deal_stage_id: destStageId
-                }, { preserveScroll: true, preserveState: true });
             }
-        } catch (error) {
-            console.error("Drop syntax error:", error);
-        }
-    };
+        });
+
+        return () => {
+            sortablesRefs.current.forEach(s => s && s.destroy());
+        };
+    }, [stages, activeTab]);
 
     // Subcomponents
     const renderNegociacoes = () => (
@@ -120,7 +91,7 @@ export default function CRMIndex({ stages = [] }) {
 
             <div className="flex-1 overflow-x-auto overflow-y-hidden p-8">
                 <div className="flex space-x-6 h-full items-start">
-                    {localStages.map((stage) => {
+                    {stages.map((stage, index) => {
                         const stageTotal = stage.deals?.reduce((acc, deal) => acc + parseFloat(deal.value || 0), 0) || 0;
                         const dealCount = stage.deals?.length || 0;
 
@@ -140,21 +111,17 @@ export default function CRMIndex({ stages = [] }) {
                                     </div>
                                 </div>
                                 
-                                {/* Droppable Area */}
+                                {/* Droppable Area Managed by SortableJS */}
                                 <div 
-                                    className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1 scrollbar-hide min-h-[100px]"
-                                    onDragOver={handleDragOver}
-                                    onDrop={(e) => handleDrop(e, stage.id)}
+                                    ref={el => containerRefs.current[index] = el}
+                                    data-stage-id={stage.id}
+                                    className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1 scrollbar-hide min-h-[150px]"
                                 >
                                     {stage.deals?.map((deal) => (
                                         <div 
                                             key={deal.id}
-                                            draggable
-                                            onDragStart={(e) => handleDragStart(e, deal, stage.id)}
-                                            onDragEnd={handleDragEnd}
-                                            className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border ${
-                                                draggingDeal === deal.id ? 'opacity-50 border-indigo-400 shadow-lg scale-105' : 'border-gray-100 dark:border-gray-700'
-                                            } cursor-grab active:cursor-grabbing hover:shadow-md hover:border-indigo-300 transition-all group`}
+                                            data-deal-id={deal.id}
+                                            className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-indigo-300 transition-all group"
                                         >
                                             <div className="flex justify-between items-start mb-2">
                                                 <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded tracking-wider ${
@@ -181,9 +148,6 @@ export default function CRMIndex({ stages = [] }) {
                                             </div>
                                         </div>
                                     ))}
-                                    
-                                    {/* Invisible padding drop zone for empty columns */}
-                                    <div className="h-20 w-full opacity-0 pointer-events-none"></div>
                                 </div>
                             </div>
                         );
