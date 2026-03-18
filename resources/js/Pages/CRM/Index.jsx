@@ -41,8 +41,12 @@ export default function CRMIndex({ stages = [] }) {
             return;
         }
 
-        const sourceStage = localStages.find(s => s.id.toString() === source.droppableId);
-        const destStage = localStages.find(s => s.id.toString() === destination.droppableId);
+        const sourceStageId = source.droppableId.replace('stage-', '');
+        const destStageId = destination.droppableId.replace('stage-', '');
+        const dealId = draggableId.replace('deal-', '');
+
+        const sourceStage = localStages.find(s => s.id.toString() === sourceStageId);
+        const destStage = localStages.find(s => s.id.toString() === destStageId);
         
         const sourceDeals = Array.from(sourceStage.deals || []);
         const destDeals = Array.from(destStage.deals || []);
@@ -56,7 +60,7 @@ export default function CRMIndex({ stages = [] }) {
                 return stage;
             }));
         } else {
-            // Optimistic update status if needed, but mainly changing stage
+            // Optimistic update
             destDeals.splice(destination.index, 0, movedDeal);
             setLocalStages(prev => prev.map(stage => {
                 if (stage.id === sourceStage.id) return { ...stage, deals: sourceDeals };
@@ -117,7 +121,7 @@ export default function CRMIndex({ stages = [] }) {
                                         </div>
                                     </div>
                                     
-                                    <Droppable droppableId={stage.id.toString()}>
+                                    <Droppable droppableId={`stage-${stage.id}`}>
                                         {(provided) => (
                                             <div 
                                                 className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1 scrollbar-hide min-h-[100px]"
@@ -125,7 +129,7 @@ export default function CRMIndex({ stages = [] }) {
                                                 ref={provided.innerRef}
                                             >
                                                 {stage.deals?.map((deal, index) => (
-                                                    <Draggable key={deal.id} draggableId={deal.id.toString()} index={index}>
+                                                    <Draggable key={`deal-${deal.id}`} draggableId={`deal-${deal.id}`} index={index}>
                                                         {(provided, snapshot) => (
                                                             <div 
                                                                 ref={provided.innerRef}
