@@ -16,9 +16,9 @@ Route::get('/', function () {
 
 Route::get('/dashboard', function () {
     return redirect()->route('inbox.all');
-})->middleware(['auth', 'verified'])->name('dashboard');
+})->middleware(['auth'])->name('dashboard');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::get('/inbox/all', function () {
         return Inertia::render('Inbox/Index');
     })->name('inbox.all');
