@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\InboxController;
+use App\Http\Controllers\CrmController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -22,9 +23,7 @@ Route::get('/dashboard', function () {
 Route::middleware(['auth'])->group(function () {
     Route::get('/inbox/all', [InboxController::class, 'index'])->name('inbox.all');
 
-    Route::get('/crm', function () {
-        return Inertia::render('CRM/Index');
-    })->name('crm.index');
+    Route::get('/crm', [CrmController::class, 'index'])->name('crm.index');
 
     Route::get('/reports', function () {
         return Inertia::render('Reports/Index');

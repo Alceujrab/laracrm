@@ -1,13 +1,11 @@
 import React, { useState } from 'react';
 import { Plus, Upload, Search, Edit2, Trash2, MoreVertical, Settings } from 'lucide-react';
 
-export default function Catalogo() {
-    const [vehicles] = useState([
-        { id: 1, marca: 'Jeep', modelo: 'Compass Longitude', ano: '2023/2023', km: '15.000', preco: 'R$ 165.900', foto: 'https://images.unsplash.com/photo-1549399542-7e3f8b79c341?auto=format&fit=crop&q=80&w=200&h=150' },
-        { id: 2, marca: 'Honda', modelo: 'Civic EXL', ano: '2021/2021', km: '32.000', preco: 'R$ 135.000', foto: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=150' },
-        { id: 3, marca: 'Toyota', modelo: 'Corolla XEI', ano: '2022/2023', km: '12.500', preco: 'R$ 148.500', foto: 'https://images.unsplash.com/photo-1621007947382-bb3c3994e3fd?auto=format&fit=crop&q=80&w=200&h=150' },
-        { id: 4, marca: 'Volkswagen', modelo: 'Nivus Highline', ano: '2023/2024', km: '5.000', preco: 'R$ 138.900', foto: 'https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?auto=format&fit=crop&q=80&w=200&h=150' },
-    ]);
+export default function Catalogo({ vehicles = [] }) {
+
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+    };
 
     return (
         <div className="flex flex-col h-full">
@@ -40,47 +38,64 @@ export default function Catalogo() {
 
             {/* Grid de Veículos */}
             <div className="flex-1 overflow-y-auto p-8 bg-gray-50 dark:bg-gray-900/50">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {vehicles.map((car) => (
-                        <div key={car.id} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 group hover:shadow-md transition-shadow">
-                            <div className="relative h-48 bg-gray-200 dark:bg-gray-700">
-                                <img src={car.foto} alt={`${car.marca} ${car.modelo}`} className="w-full h-full object-cover" />
-                                <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button className="p-1.5 bg-white/90 dark:bg-gray-900/90 hover:bg-white text-gray-700 dark:text-gray-300 rounded shadow-sm transition-colors">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button className="p-1.5 bg-white/90 dark:bg-gray-900/90 hover:bg-red-50 text-red-600 rounded shadow-sm transition-colors">
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                            <div className="p-4">
-                                <div className="flex justify-between items-start mb-1">
-                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate" title={`${car.marca} ${car.modelo}`}>
-                                        {car.marca} {car.modelo}
-                                    </h3>
-                                    <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><MoreVertical className="w-4 h-4" /></button>
-                                </div>
-                                
-                                <div className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                    <span className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded">{car.ano}</span>
-                                    <span className="flex items-center"><Settings className="w-3 h-3 mr-1" /> Aut</span>
-                                    <span>{car.km} km</span>
-                                </div>
-
-                                <div className="flex justify-between items-end pt-3 border-t border-gray-100 dark:border-gray-700">
-                                    <div>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Preço à vista</p>
-                                        <p className="text-xl font-bold text-green-600 dark:text-green-500">{car.preco}</p>
+                {vehicles.length === 0 ? (
+                    <div className="p-8 text-center text-gray-400">Nenhum veículo cadastrado no estoque.</div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {vehicles.map((car) => (
+                            <div key={car.id} className="bg-white dark:bg-gray-800 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700 group hover:shadow-md transition-shadow flex flex-col">
+                                <div className="relative h-48 bg-gray-200 dark:bg-gray-700">
+                                    <img 
+                                        src={car.images && car.images.length > 0 ? car.images[0] : 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=200&h=150'} 
+                                        alt={`${car.make} ${car.model}`} 
+                                        className="w-full h-full object-cover" 
+                                    />
+                                    <div className="absolute top-2 right-2 flex space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <button className="p-1.5 bg-white/90 dark:bg-gray-900/90 hover:bg-white text-gray-700 dark:text-gray-300 rounded shadow-sm transition-colors">
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button className="p-1.5 bg-white/90 dark:bg-gray-900/90 hover:bg-red-50 text-red-600 rounded shadow-sm transition-colors">
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
                                     </div>
-                                    <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 transition-colors">
-                                        Ver Detalhes
-                                    </button>
+                                    <div className="absolute bottom-2 left-2">
+                                        <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded tracking-wider ${
+                                            car.status === 'available' ? 'bg-green-100 text-green-700 dark:bg-green-900/80 dark:text-green-300' :
+                                            car.status === 'sold' ? 'bg-red-100 text-red-700 dark:bg-red-900/80 dark:text-red-300' :
+                                            'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/80 dark:text-yellow-300'
+                                        }`}>
+                                            {car.status === 'available' ? 'Disponível' : car.status === 'sold' ? 'Vendido' : 'Reservado'}
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="p-4 flex flex-col flex-1">
+                                    <div className="flex justify-between items-start mb-1">
+                                        <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate" title={`${car.make} ${car.model}`}>
+                                            {car.make} {car.model}
+                                        </h3>
+                                        <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><MoreVertical className="w-4 h-4" /></button>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-3 text-sm text-gray-500 dark:text-gray-400 mb-4 mt-1">
+                                        <span className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded text-xs font-semibold">{car.year}</span>
+                                        <span>•</span>
+                                        <span>{car.km?.toLocaleString('pt-BR')} km</span>
+                                    </div>
+
+                                    <div className="mt-auto pt-3 border-t border-gray-100 dark:border-gray-700 flex justify-between items-end">
+                                        <div>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Preço à vista</p>
+                                            <p className="text-xl font-bold text-green-600 dark:text-green-500">{formatCurrency(car.price)}</p>
+                                        </div>
+                                        <button className="text-sm font-medium text-indigo-600 hover:text-indigo-700 dark:text-indigo-400 transition-colors">
+                                            Detalhes
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    ))}
-                </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );

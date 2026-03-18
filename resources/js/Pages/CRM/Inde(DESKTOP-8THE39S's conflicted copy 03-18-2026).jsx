@@ -5,7 +5,7 @@ import { Briefcase, Car, CheckSquare, Users, Award, Target, Plus, MoreHorizontal
 import Catalogo from './Tabs/Catalogo';
 import Contatos from './Tabs/Contatos';
 
-export default function CRMIndex({ stages = [], vehicles = [] }) {
+export default function CRMIndex({ stages = [] }) {
     const [activeTab, setActiveTab] = useState('negociacoes');
 
     const crmMenu = [
@@ -131,7 +131,7 @@ export default function CRMIndex({ stages = [], vehicles = [] }) {
             <Head title={`CRM - ${activeTab}`} />
 
             {activeTab === 'negociacoes' && renderNegociacoes()}
-            {activeTab === 'catalogo' && <Catalogo />}
+            {activeTab === 'catalogo' && <Catalogo vehicles={vehicles} />}
             {activeTab === 'contatos' && <Contatos />}
             {activeTab === 'tarefas' && renderPlaceholder('Gerenciamento de Tarefas', 'Agendamentos e to-dos focados em lembretes para ações e follow-ups com contatos.')}
             {activeTab === 'campanhas' && renderPlaceholder('Disparos de Campanhas Outbound', 'Fluxo Wizard Modal de + Nova Campanha com canais WhatsApp, E-mail ou SMS integrados.')}
