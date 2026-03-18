@@ -3,10 +3,12 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
 import { Briefcase, CheckSquare, Users, Award, Target, Plus, MoreHorizontal, Filter, Search, Calendar } from 'lucide-react';
 import Contatos from './Tabs/Contatos';
+import DealSlideOver from '@/Components/Deal/DealSlideOver';
 import Sortable from 'sortablejs';
 
 export default function CRMIndex({ stages = [] }) {
     const [activeTab, setActiveTab] = useState('negociacoes');
+    const [selectedDealId, setSelectedDealId] = useState(null);
     const containerRefs = useRef([]);
     const sortablesRefs = useRef([]);
 
@@ -121,6 +123,7 @@ export default function CRMIndex({ stages = [] }) {
                                         <div 
                                             key={deal.id}
                                             data-deal-id={deal.id}
+                                            onClick={() => setSelectedDealId(deal.id)}
                                             className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 cursor-grab active:cursor-grabbing hover:shadow-md hover:border-indigo-300 transition-all group"
                                         >
                                             <div className="flex justify-between items-start mb-2">
@@ -183,6 +186,12 @@ export default function CRMIndex({ stages = [] }) {
             {activeTab === 'tarefas' && renderPlaceholder('Gerenciamento de Tarefas', 'Agendamentos e to-dos focados em lembretes para ações e follow-ups com contatos.')}
             {activeTab === 'campanhas' && renderPlaceholder('Disparos de Campanhas Outbound', 'Fluxo Wizard Modal de + Nova Campanha com canais WhatsApp, E-mail ou SMS integrados.')}
             {activeTab === 'metas' && renderPlaceholder('Metas do Equipe', 'Indicadores Gauge e Termômetros avaliando performance da equipe via R$.')}
+
+            <DealSlideOver 
+                isOpen={!!selectedDealId} 
+                dealId={selectedDealId} 
+                onClose={() => setSelectedDealId(null)} 
+            />
         </AuthenticatedLayout>
     );
 }
