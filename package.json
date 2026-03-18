@@ -24,7 +24,6 @@
     "dependencies": {
         "immer": "^11.1.4",
         "lucide-react": "^0.577.0",
-        "recharts": "^3.8.0",
         "sortablejs": "^1.15.7"
     }
 }
