@@ -25,7 +25,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/inbox/all', [InboxController::class, 'index'])->name('inbox.all');
 
     Route::get('/crm', [CrmController::class, 'index'])->name('crm.index');
-    Route::put('/crm/deals/{deal}/move', [CrmController::class, 'moveDeal'])->name('crm.deals.move');
     
     Route::get('/catalog', [VehicleController::class, 'index'])->name('catalog.index');
 

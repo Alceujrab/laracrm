@@ -23,6 +23,8 @@
     },
     "dependencies": {
         "lucide-react": "^0.577.0",
-        "recharts": "^3.8.0"
+        "react-sortablejs": "^6.1.4",
+        "recharts": "^3.8.0",
+        "sortablejs": "^1.15.7"
     }
 }
