@@ -1,0 +1,21 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Redireciona tudo para a pasta public, onde o index.php do Laravel fica.
+    RewriteRule ^(.*)$ public/$1 [L]
+</IfModule>
+
+# Bloquear acesso a arquivos ocultos importantes como .env e .git
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>
+
+# Bloquear acesso as pastas estruturais do Laravel
+<DirectoryMatch "^(app|bootstrap|config|database|resources|routes|storage|tests)/">
+    Require all denied
+</DirectoryMatch>
+
+# Bloquear acesso a arquivos sensíveis soltos na raiz
+<FilesMatch "^(composer\.json|composer\.lock|package\.json|package-lock\.json|webpack\.mix\.js|artisan)$">
+    Require all denied
+</FilesMatch>
