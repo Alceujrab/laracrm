@@ -1,11 +1,18 @@
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head } from '@inertiajs/react';
-import { Briefcase, Car, CheckSquare, Users, Award, Target, Plus, MoreHorizontal, Filter, Search, Calendar } from 'lucide-react';
+import { Head, router } from '@inertiajs/react';
+import { Briefcase, CheckSquare, Users, Award, Target, Plus, MoreHorizontal, Filter, Search, Calendar } from 'lucide-react';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import Contatos from './Tabs/Contatos';
 
 export default function CRMIndex({ stages = [] }) {
     const [activeTab, setActiveTab] = useState('negociacoes');
+    const [localStages, setLocalStages] = useState(stages);
+
+    // Sync state if props change
+    React.useEffect(() => {
+        setLocalStages(stages);
+    }, [stages]);
 
     const crmMenu = [
         { label: 'Negociações', icon: Briefcase, active: activeTab === 'negociacoes', id: 'negociacoes' },
@@ -25,10 +32,49 @@ export default function CRMIndex({ stages = [] }) {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
     };
 
+    const handleDragEnd = (result) => {
+        const { destination, source, draggableId } = result;
+
+        if (!destination) return;
+
+        if (destination.droppableId === source.droppableId && destination.index === source.index) {
+            return;
+        }
+
+        const sourceStage = localStages.find(s => s.id.toString() === source.droppableId);
+        const destStage = localStages.find(s => s.id.toString() === destination.droppableId);
+        
+        const sourceDeals = Array.from(sourceStage.deals || []);
+        const destDeals = Array.from(destStage.deals || []);
+        
+        const [movedDeal] = sourceDeals.splice(source.index, 1);
+        
+        if (source.droppableId === destination.droppableId) {
+            sourceDeals.splice(destination.index, 0, movedDeal);
+            setLocalStages(prev => prev.map(stage => {
+                if (stage.id === sourceStage.id) return { ...stage, deals: sourceDeals };
+                return stage;
+            }));
+        } else {
+            // Optimistic update status if needed, but mainly changing stage
+            destDeals.splice(destination.index, 0, movedDeal);
+            setLocalStages(prev => prev.map(stage => {
+                if (stage.id === sourceStage.id) return { ...stage, deals: sourceDeals };
+                if (stage.id === destStage.id) return { ...stage, deals: destDeals };
+                return stage;
+            }));
+
+            // Sync with DB
+            router.put(route('crm.deals.move', { deal: movedDeal.id }), {
+                deal_stage_id: destStage.id
+            }, { preserveScroll: true });
+        }
+    };
+
     // Subcomponents
     const renderNegociacoes = () => (
         <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900/50">
-            <div className="px-8 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex justify-between items-center z-10">
+            <div className="px-8 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex justify-between items-center z-10 w-full">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Funil de Vendas</h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Gerencie suas negociações arrastando os cards pelos estágios.</p>
@@ -49,66 +95,88 @@ export default function CRMIndex({ stages = [] }) {
             </div>
 
             <div className="flex-1 overflow-x-auto overflow-y-hidden p-8">
-                <div className="flex space-x-6 h-full items-start">
-                    {stages.map((stage) => {
-                        const stageTotal = stage.deals?.reduce((acc, deal) => acc + parseFloat(deal.value || 0), 0) || 0;
-                        const dealCount = stage.deals?.length || 0;
+                <DragDropContext onDragEnd={handleDragEnd}>
+                    <div className="flex space-x-6 h-full items-start">
+                        {localStages.map((stage) => {
+                            const stageTotal = stage.deals?.reduce((acc, deal) => acc + parseFloat(deal.value || 0), 0) || 0;
+                            const dealCount = stage.deals?.length || 0;
 
-                        return (
-                            <div key={stage.id} className="flex-shrink-0 w-80 flex flex-col max-h-full">
-                                <div 
-                                    className="bg-white dark:bg-gray-800 p-4 rounded-t-xl border-t-4 shadow-sm mb-3 relative" 
-                                    style={{ borderTopColor: stage.color || '#e5e7eb' }}
-                                >
-                                    <div className="flex justify-between items-center mb-1">
-                                        <h3 className="font-bold text-gray-800 dark:text-white">{stage.name}</h3>
-                                        <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><MoreHorizontal className="w-5 h-5" /></button>
-                                    </div>
-                                    <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
-                                        <span className="font-semibold">{formatCurrency(stageTotal)}</span>
-                                        <span className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs font-medium">{dealCount} Negócios</span>
-                                    </div>
-                                </div>
-                                
-                                <div className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1 scrollbar-hide">
-                                    {stage.deals?.map((deal) => (
-                                        <div key={deal.id} className="bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 cursor-pointer hover:shadow-md hover:border-indigo-300 transition-all group">
-                                            <div className="flex justify-between items-start mb-2">
-                                                <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded tracking-wider ${
-                                                    deal.status === 'won' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
-                                                    deal.status === 'lost' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
-                                                    'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
-                                                }`}>
-                                                    {deal.status === 'open' ? 'Aberto' : deal.status}
-                                                </span>
-                                                <button className="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="w-4 h-4" /></button>
-                                            </div>
-                                            <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1 text-balance">
-                                                {deal.vehicle ? `${deal.vehicle.make} ${deal.vehicle.model}` : deal.title}
-                                            </h4>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 truncate">👥 {deal.contact?.name || 'Sem contato'}</p>
-                                            <p className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-3">{formatCurrency(deal.value)}</p>
-                                            <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
-                                                <div className="flex items-center text-xs text-gray-500 dark:text-gray-400"><Calendar className="w-3 h-3 mr-1" /> {new Date(deal.created_at).toLocaleDateString()}</div>
-                                                {deal.assignee && (
-                                                    <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-[10px] font-bold text-indigo-700 dark:text-indigo-300 ring-2 ring-white">
-                                                        {deal.assignee.name.charAt(0)}
-                                                    </div>
-                                                )}
-                                            </div>
+                            return (
+                                <div key={stage.id} className="flex-shrink-0 w-80 flex flex-col max-h-full">
+                                    <div 
+                                        className="bg-white dark:bg-gray-800 p-4 rounded-t-xl border-t-4 shadow-sm mb-3 relative" 
+                                        style={{ borderTopColor: stage.color || '#e5e7eb' }}
+                                    >
+                                        <div className="flex justify-between items-center mb-1">
+                                            <h3 className="font-bold text-gray-800 dark:text-white">{stage.name}</h3>
+                                            <button className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200"><MoreHorizontal className="w-5 h-5" /></button>
                                         </div>
-                                    ))}
+                                        <div className="flex justify-between items-center text-sm text-gray-500 dark:text-gray-400">
+                                            <span className="font-semibold">{formatCurrency(stageTotal)}</span>
+                                            <span className="bg-gray-100 dark:bg-gray-700 px-2 py-0.5 rounded-full text-xs font-medium">{dealCount} Negócios</span>
+                                        </div>
+                                    </div>
+                                    
+                                    <Droppable droppableId={stage.id.toString()}>
+                                        {(provided) => (
+                                            <div 
+                                                className="flex-1 overflow-y-auto space-y-3 pb-4 pr-1 scrollbar-hide min-h-[100px]"
+                                                {...provided.droppableProps}
+                                                ref={provided.innerRef}
+                                            >
+                                                {stage.deals?.map((deal, index) => (
+                                                    <Draggable key={deal.id} draggableId={deal.id.toString()} index={index}>
+                                                        {(provided, snapshot) => (
+                                                            <div 
+                                                                ref={provided.innerRef}
+                                                                {...provided.draggableProps}
+                                                                {...provided.dragHandleProps}
+                                                                className={`bg-white dark:bg-gray-800 p-4 rounded-xl shadow-sm border ${
+                                                                    snapshot.isDragging ? 'border-indigo-400 shadow-lg scale-105' : 'border-gray-100 dark:border-gray-700'
+                                                                } cursor-grab active:cursor-grabbing hover:shadow-md hover:border-indigo-300 transition-all group`}
+                                                            >
+                                                                <div className="flex justify-between items-start mb-2">
+                                                                    <span className={`px-2 py-1 text-[10px] font-bold uppercase rounded tracking-wider ${
+                                                                        deal.status === 'won' ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-400' :
+                                                                        deal.status === 'lost' ? 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-400' :
+                                                                        'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400'
+                                                                    }`}>
+                                                                        {deal.status === 'open' ? 'Aberto' : deal.status}
+                                                                    </span>
+                                                                    <button className="text-gray-400 hover:text-indigo-600 opacity-0 group-hover:opacity-100 transition-opacity"><MoreHorizontal className="w-4 h-4" /></button>
+                                                                </div>
+                                                                <h4 className="font-bold text-gray-900 dark:text-white text-sm mb-1 text-balance">
+                                                                    {deal.vehicle ? `${deal.vehicle.make} ${deal.vehicle.model}` : deal.title}
+                                                                </h4>
+                                                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-2 truncate">👥 {deal.contact?.name || 'Sem contato'}</p>
+                                                                <p className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-3">{formatCurrency(deal.value)}</p>
+                                                                <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                                                                    <div className="flex items-center text-xs text-gray-500 dark:text-gray-400"><Calendar className="w-3 h-3 mr-1" /> {new Date(deal.created_at).toLocaleDateString()}</div>
+                                                                    {deal.assignee && (
+                                                                        <div className="w-6 h-6 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-[10px] font-bold text-indigo-700 dark:text-indigo-300 ring-2 ring-white">
+                                                                            {deal.assignee.name.charAt(0)}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </Draggable>
+                                                ))}
+                                                {provided.placeholder}
+                                            </div>
+                                        )}
+                                    </Droppable>
                                 </div>
-                            </div>
-                        );
-                    })}
-                    
-                    <div className="flex-shrink-0 w-80 flex flex-col pt-1">
-                        <button className="flex items-center justify-center w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all font-medium">
-                            <Plus className="w-5 h-5 mr-2" /> Adicionar Estágio
-                        </button>
+                            );
+                        })}
+                        
+                        <div className="flex-shrink-0 w-80 flex flex-col pt-1">
+                            <button className="flex items-center justify-center w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all font-medium">
+                                <Plus className="w-5 h-5 mr-2" /> Adicionar Estágio
+                            </button>
+                        </div>
                     </div>
-                </div>
+                </DragDropContext>
             </div>
         </div>
     );
