@@ -2,15 +2,13 @@ import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import { Briefcase, Car, CheckSquare, Users, Award, Target, Plus, MoreHorizontal, Filter, Search, Calendar } from 'lucide-react';
-import Catalogo from './Tabs/Catalogo';
 import Contatos from './Tabs/Contatos';
 
-export default function CRMIndex({ stages = [], vehicles = [] }) {
+export default function CRMIndex({ stages = [] }) {
     const [activeTab, setActiveTab] = useState('negociacoes');
 
     const crmMenu = [
         { label: 'Negociações', icon: Briefcase, active: activeTab === 'negociacoes', id: 'negociacoes' },
-        { label: 'Catálogo', icon: Car, active: activeTab === 'catalogo', id: 'catalogo' },
         { label: 'Tarefas', icon: CheckSquare, active: activeTab === 'tarefas', id: 'tarefas' },
         { label: 'Contatos', icon: Users, active: activeTab === 'contatos', id: 'contatos' },
         { label: 'Campanhas', icon: Award, active: activeTab === 'campanhas', id: 'campanhas' },
@@ -131,7 +129,6 @@ export default function CRMIndex({ stages = [], vehicles = [] }) {
             <Head title={`CRM - ${activeTab}`} />
 
             {activeTab === 'negociacoes' && renderNegociacoes()}
-            {activeTab === 'catalogo' && <Catalogo />}
             {activeTab === 'contatos' && <Contatos />}
             {activeTab === 'tarefas' && renderPlaceholder('Gerenciamento de Tarefas', 'Agendamentos e to-dos focados em lembretes para ações e follow-ups com contatos.')}
             {activeTab === 'campanhas' && renderPlaceholder('Disparos de Campanhas Outbound', 'Fluxo Wizard Modal de + Nova Campanha com canais WhatsApp, E-mail ou SMS integrados.')}
