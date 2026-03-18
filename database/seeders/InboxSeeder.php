@@ -16,10 +16,14 @@ class InboxSeeder extends Seeder
      */
     public function run(): void
     {
-        // Pega o primeiro usuário criado (admin)
+        // Pega o primeiro usuário ou cria um manualmente (sem usar factory/faker)
         $user = User::first();
         if (!$user) {
-            $user = User::factory()->create(['name' => 'Admin User', 'email' => 'admin@cfauto.com.br']);
+            $user = User::create([
+                'name' => 'Admin User', 
+                'email' => 'admin@cfauto.com.br',
+                'password' => \Illuminate\Support\Facades\Hash::make('Apjbr@1981')
+            ]);
         }
 
         $whatsapp = Channel::create(['name' => 'WhatsApp Oficial', 'type' => 'whatsapp', 'identifier' => '+55 11 99999-9999', 'status' => 'connected']);
