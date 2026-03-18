@@ -29,16 +29,8 @@ export default function Sidebar({ menuItems = [], secondaryAction = null }) {
                         const ItemIcon = item.icon;
                         const isActive = item.active;
                         
-                        return (
-                            <Link
-                                key={index}
-                                href={item.route ? route(item.route) : '#'}
-                                className={`group flex items-center px-2 py-2 text-sm font-medium rounded-md transition-colors ${
-                                    isActive
-                                        ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-gray-900/5 dark:ring-white/10'
-                                        : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
-                                }`}
-                            >
+                        const content = (
+                            <>
                                 <ItemIcon 
                                     className={`flex-shrink-0 h-5 w-5 ${
                                         isActive 
@@ -59,6 +51,26 @@ export default function Sidebar({ menuItems = [], secondaryAction = null }) {
                                         )}
                                     </span>
                                 )}
+                            </>
+                        );
+
+                        const className = `group flex items-center w-full px-2 py-2 text-sm font-medium rounded-md transition-colors ${
+                            isActive
+                                ? 'bg-white dark:bg-gray-800 text-indigo-600 dark:text-indigo-400 shadow-sm ring-1 ring-gray-900/5 dark:ring-white/10'
+                                : 'text-gray-700 hover:text-gray-900 hover:bg-gray-100 dark:text-gray-300 dark:hover:text-white dark:hover:bg-gray-800'
+                        }`;
+
+                        if (item.onClick) {
+                            return (
+                                <button key={index} onClick={item.onClick} className={className}>
+                                    {content}
+                                </button>
+                            );
+                        }
+                        
+                        return (
+                            <Link key={index} href={item.route ? route(item.route) : '#'} className={className}>
+                                {content}
                             </Link>
                         );
                     })}
