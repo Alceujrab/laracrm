@@ -11,11 +11,11 @@ export default function Topbar({ activeModule = 'inbox' }) {
     const [workspace] = useState('CF Auto CRM');
 
     const modules = [
-        { id: 'inbox', label: 'Caixa de Entrada', icon: Mail, route: 'dashboard' },
-        { id: 'crm', label: 'CRM', icon: Users, route: 'dashboard' },
-        { id: 'catalog', label: 'Catálogo de Veículos', icon: Car, route: 'dashboard' },
-        { id: 'reports', label: 'Relatórios', icon: BarChart2, route: 'dashboard' },
-        { id: 'settings', label: 'Configurações', icon: Settings, route: 'dashboard' },
+        { id: 'inbox', label: 'Caixa de Entrada', icon: Mail, route: 'inbox.all' },
+        { id: 'crm', label: 'CRM', icon: Users, route: 'crm.index' },
+        { id: 'catalog', label: 'Catálogo de Veículos', icon: Car, route: 'crm.index' }, /* O catálogo é uma aba dentro do CRM */
+        { id: 'reports', label: 'Relatórios', icon: BarChart2, route: 'reports.index' },
+        { id: 'settings', label: 'Configurações', icon: Settings, route: 'settings.index' },
     ];
 
     return (
