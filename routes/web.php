@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\InboxController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -19,9 +20,7 @@ Route::get('/dashboard', function () {
 })->middleware(['auth'])->name('dashboard');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/inbox/all', function () {
-        return Inertia::render('Inbox/Index');
-    })->name('inbox.all');
+    Route::get('/inbox/all', [InboxController::class, 'index'])->name('inbox.all');
 
     Route::get('/crm', function () {
         return Inertia::render('CRM/Index');
