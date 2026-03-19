@@ -40,11 +40,9 @@ class EvolutionWebhookController extends Controller
             return response()->json(['status' => 'no_message']);
         }
 
-        // Ignorar se a mensagem foi originada por nós
+        // Verifica quem enviou
         $fromMe = $messageData['key']['fromMe'] ?? false;
-        if ($fromMe) {
-            return response()->json(['status' => 'ignored_from_me']);
-        }
+        $senderType = $fromMe ? 'user' : 'contact';
 
         // Ignorar Status ou Grupos
         $remoteJid = $messageData['key']['remoteJid'] ?? '';
@@ -58,6 +56,7 @@ class EvolutionWebhookController extends Controller
         $messageContent = $this->extractTextFromEvolutionMessage($messageData['message'] ?? []);
 
         if (empty($messageContent)) {
+            Log::warning("Evolution Webhook: Mensagem vazia ou tipo não suportado.");
             return response()->json(['status' => 'empty_or_unsupported']);
         }
 
@@ -67,7 +66,7 @@ class EvolutionWebhookController extends Controller
             ['name' => $pushName]
         );
 
-        // Atualiza nome do contato se não tinha nome (só telefone inicialmente)
+        // Atualiza nome do contato se não tinha nome
         if ($contact->name === $phoneNumber && $pushName !== $phoneNumber) {
             $contact->update(['name' => $pushName]);
         }
@@ -79,17 +78,17 @@ class EvolutionWebhookController extends Controller
         );
         $conversation->update(['last_message_at' => now()]);
 
-        // 3. Salva a Mensagem do Cliente no CRM
+        // 3. Salva a Mensagem no CRM
         $message = Message::create([
             'conversation_id' => $conversation->id,
-            'sender_type' => 'contact',
-            'sender_id' => $contact->id,
+            'sender_type' => $senderType,
+            'sender_id' => $fromMe ? null : $contact->id,
             'content' => $messageContent,
             'type' => 'text'
         ]);
 
-        // 4. Se for elegível (Ticket Aberto sem um corretor humano), desperta o Agente de Inteligência
-        if ($conversation->status === 'open' && is_null($conversation->assigned_to)) {
+        // 4. Inteligência Artificial: Responde se for nova mensagem DO CLIENTE e o ticket não tem humano
+        if (!$fromMe && $conversation->status === 'open' && is_null($conversation->assigned_to)) {
             Log::info("Despachando IA para responder a conversa {$conversation->id}");
             ProcessAiReplyJob::dispatch($conversation, $message);
         }

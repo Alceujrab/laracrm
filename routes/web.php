@@ -29,6 +29,23 @@ Route::get('/dashboard', function () {
 // Rota de Webhook da Evolution API (livre de CSRF via bootstrap/app.php)
 Route::post('/api/webhooks/evolution', [EvolutionWebhookController::class, 'handle'])->name('api.webhooks.evolution');
 
+// Leitor Remoto de Logs (Debug cPanel)
+Route::get('/api/system/logs', function () {
+    $path = storage_path('logs/laravel.log');
+    if (!file_exists($path)) {
+        return "Nenhum arquivo de log encontrado em $path";
+    }
+    
+    // Ler as ultimas 500 linhas de forma otimizada
+    $lines = file($path);
+    if ($lines === false) {
+        return "Erro ao ler as linhas do arquivo de log.";
+    }
+    
+    $lastLines = array_slice($lines, -500);
+    return response("<pre>" . implode("", $lastLines) . "</pre>")->header('Content-Type', 'text/html');
+});
+
 Route::middleware(['auth'])->group(function () {
     // Inbox
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
