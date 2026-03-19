@@ -25,7 +25,7 @@ class Deal extends Model
         return $this->belongsTo(Vehicle::class);
     }
 
-    public function stage()
+    public function dealStage()
     {
         return $this->belongsTo(DealStage::class, 'deal_stage_id');
     }
