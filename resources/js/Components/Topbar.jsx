@@ -11,7 +11,7 @@ export default function Topbar({ activeModule = 'inbox' }) {
     const [workspace] = useState('CF Auto CRM');
 
     const modules = [
-        { id: 'inbox', label: 'Caixa de Entrada', icon: Mail, route: 'inbox.all' },
+        { id: 'inbox', label: 'Caixa de Entrada', icon: Mail, route: 'inbox.index' },
         { id: 'crm', label: 'CRM', icon: Users, route: 'crm.index' },
         { id: 'catalog', label: 'Catálogo de Veículos', icon: Car, route: 'catalog.index' },
         { id: 'reports', label: 'Relatórios', icon: BarChart2, route: 'reports.index' },
