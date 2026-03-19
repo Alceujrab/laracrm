@@ -3,9 +3,12 @@ import axios from 'axios';
 import { X, User, Car, Calendar, DollarSign, CheckSquare, MessageSquare, Loader2, Tag } from 'lucide-react';
 
 export default function DealSlideOver({ isOpen, onClose, dealId }) {
+<<<<<<< HEAD
     const [deal, setDeal] = useState(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('resumo'); // resumo, tarefas, historico
+=======
+>>>>>>> c339cb3aa57c6e21cdbc12c0a878389398fc0767
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [newTaskDueDate, setNewTaskDueDate] = useState('');
