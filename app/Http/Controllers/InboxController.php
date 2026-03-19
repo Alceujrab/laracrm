@@ -17,7 +17,7 @@ class InboxController extends Controller
             'contacts' => \App\Models\Contact::orderBy('name')->get(),
             'stages' => \App\Models\DealStage::orderBy('order')->get(),
             'vehicles' => \App\Models\Vehicle::where('status', 'available')->orderBy('make')->get(),
-            'channels' => \App\Models\Channel::where('is_active', true)->get()
+            'channels' => \App\Models\Channel::all()
         ]);
     }
 
