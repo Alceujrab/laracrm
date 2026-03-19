@@ -70,7 +70,7 @@ class ProcessAiReplyJob implements ShouldQueue
             Log::info("Enviando prompt para Laravel AI do canal {$channel->name} (Conversa {$this->conversation->id})");
             
             $aiResponse = $agent->prompt($userPrompt);
-            $replyText = $aiResponse->text();
+            $replyText = $aiResponse->text;
 
             if (empty(trim($replyText))) {
                 throw new \Exception("A IA retornou uma resposta vazia.");
