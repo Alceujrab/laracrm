@@ -208,12 +208,30 @@ export default function CRMIndex({ stages = [], filters = {} }) {
         </div>
     );
 
-    const renderPlaceholder = (title, desc) => (
+    const renderPropostas = () => (
         <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-gray-50 dark:bg-gray-950">
-            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">{title}</h2>
-            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">{desc}</p>
+            <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">Módulo de Propostas</h2>
+            <p className="text-gray-500 dark:text-gray-400 max-w-md mx-auto">Em breve: crie e gerencie propostas comerciais integradas ao funil.</p>
         </div>
     );
+
+    const renderConfiguracoes = () => (
+        <ConfiguracoesFunil stages={stages} />
+    );
+
+    const renderContent = () => {
+        switch(activeTab) {
+            case 'negociacoes': return renderNegociacoes();
+            case 'propostas': return renderPropostas();
+            case 'configuracoes': return renderConfiguracoes();
+            case 'ganhos': return (
+                <div className="flex items-center justify-center h-full text-gray-500 p-8">
+                    Módulo de Ganhos / Relatórios (Em breve)
+                </div>
+            );
+            default: return renderNegociacoes();
+        }
+    };
 
     return (
         <AuthenticatedLayout
