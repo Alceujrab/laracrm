@@ -11,7 +11,11 @@ class InboxController extends Controller
     public function index(Request $request)
     {
         return Inertia::render('Inbox/Index', [
-            'conversations' => $this->getConversations()
+            'conversations' => $this->getConversations(),
+            'users' => \App\Models\User::orderBy('name')->get(),
+            'deals' => \App\Models\Deal::where('status', 'open')->orderBy('title')->get(),
+            'contacts' => \App\Models\Contact::orderBy('name')->get(),
+            'stages' => \App\Models\DealStage::orderBy('order')->get()
         ]);
     }
 
@@ -22,7 +26,7 @@ class InboxController extends Controller
 
     private function getConversations()
     {
-        return Conversation::with(['contact', 'channel', 'messages' => function($q) {
+        return Conversation::with(['contact', 'channel', 'assignee', 'messages' => function($q) {
             $q->orderBy('created_at', 'asc');
         }])->orderBy('last_message_at', 'desc')->get();
     }
@@ -30,38 +34,68 @@ class InboxController extends Controller
     public function sendMessage(Request $request, Conversation $conversation, \App\Services\EvolutionApiService $evolutionApi)
     {
         $request->validate([
-            'content' => 'required|string'
+            'content' => 'required|string',
+            'type' => 'nullable|string|in:text,internal_note'
         ]);
 
-        $channel = $conversation->channel;
-        $contact = $conversation->contact;
+        $type = $request->type ?? 'text';
 
-        if (!$channel || !$contact) {
-            return response()->json(['error' => 'Conversa sem canal ou contato válido'], 400);
+        // Se NÃO for nota interna, despachamos para a Evolution API (WhatsApp)
+        if ($type !== 'internal_note') {
+            $channel = $conversation->channel;
+            $contact = $conversation->contact;
+
+            if (!$channel || !$contact) {
+                return response()->json(['error' => 'Conversa sem canal ou contato válido'], 400);
+            }
+
+            $credentials = $channel->credentials ?? [];
+            $apiUrl = $credentials['evolution_url'] ?? null;
+            $apiKey = $credentials['api_key'] ?? null;
+            $instanceName = $channel->identifier;
+
+            if ($apiUrl && $apiKey && $instanceName) {
+                // Ignore failure if fake instance
+                try {
+                    $evolutionApi->sendText($apiUrl, $apiKey, $instanceName, $contact->phone, $request->content);
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Seding via evolution failed: " . $e->getMessage());
+                }
+            }
         }
 
-        // Credentials Evolution
-        $credentials = $channel->credentials ?? [];
-        $apiUrl = $credentials['evolution_url'] ?? null;
-        $apiKey = $credentials['api_key'] ?? null;
-        $instanceName = $channel->identifier;
-
-        // Tentar enviar via Evolution
-        if ($apiUrl && $apiKey && $instanceName) {
-            $response = $evolutionApi->sendText($apiUrl, $apiKey, $instanceName, $contact->phone, $request->content);
-        }
-
-        // Registrar no BD da nossa Inbox
+        // Salva a mensagem no Banco
         $message = \App\Models\Message::create([
             'conversation_id' => $conversation->id,
             'sender_type' => 'user',
             'sender_id' => auth()->id(),
             'content' => $request->content,
-            'type' => 'text'
+            'type' => $type
         ]);
 
         $conversation->update(['last_message_at' => now()]);
 
         return response()->json($message);
+    }
+    
+    public function assign(Request $request, Conversation $conversation)
+    {
+        $request->validate(['user_id' => 'nullable|exists:users,id']);
+        $conversation->update(['assigned_to' => $request->user_id]);
+        return response()->json(['success' => true]);
+    }
+
+    public function updateStatus(Request $request, Conversation $conversation)
+    {
+        $request->validate(['status' => 'required|in:open,resolved']);
+        $conversation->update(['status' => $request->status]);
+        return response()->json(['success' => true]);
+    }
+
+    public function updateTags(Request $request, \App\Models\Contact $contact)
+    {
+        $request->validate(['tags' => 'array']);
+        $contact->update(['tags' => $request->tags]);
+        return response()->json(['success' => true]);
     }
 }
