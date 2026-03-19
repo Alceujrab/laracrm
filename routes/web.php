@@ -7,6 +7,7 @@ use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\DealStageController;
+use App\Http\Controllers\EvolutionWebhookController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -23,6 +24,9 @@ Route::get('/', function () {
 Route::get('/dashboard', function () {
     return redirect()->route('inbox.all');
 })->middleware(['auth'])->name('dashboard');
+
+// Rota de Webhook da Evolution API (livre de CSRF via bootstrap/app.php)
+Route::post('/api/webhooks/evolution', [EvolutionWebhookController::class, 'handle'])->name('api.webhooks.evolution');
 
 Route::middleware(['auth'])->group(function () {
     Route::get('/inbox/all', [InboxController::class, 'index'])->name('inbox.all');
