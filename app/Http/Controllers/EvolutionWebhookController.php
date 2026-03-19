@@ -35,25 +35,31 @@ class EvolutionWebhookController extends Controller
             ['name' => 'Instância ' . $instanceName, 'type' => 'whatsapp', 'status' => 'connected']
         );
 
-        $messageData = $payload['data']['message'] ?? null;
-        if (!$messageData) {
-            return response()->json(['status' => 'no_message']);
+        $dataNode = $payload['data'] ?? [];
+        if (empty($dataNode)) {
+            return response()->json(['status' => 'no_data']);
         }
 
+        $keyNode = $dataNode['key'] ?? [];
+        $messageObject = $dataNode['message'] ?? [];
+        $pushName = $dataNode['pushName'] ?? '';
+
         // Verifica quem enviou
-        $fromMe = $messageData['key']['fromMe'] ?? false;
+        $fromMe = $keyNode['fromMe'] ?? false;
         $senderType = $fromMe ? 'user' : 'contact';
 
         // Ignorar Status ou Grupos
-        $remoteJid = $messageData['key']['remoteJid'] ?? '';
+        $remoteJid = $keyNode['remoteJid'] ?? '';
         if (str_contains($remoteJid, '@g.us') || str_contains($remoteJid, 'status@broadcast')) {
             return response()->json(['status' => 'ignored_group_or_status']);
         }
 
         // Extrai telefone (JID) e Nome
         $phoneNumber = explode('@', $remoteJid)[0];
-        $pushName = $messageData['pushName'] ?? $phoneNumber;
-        $messageContent = $this->extractTextFromEvolutionMessage($messageData['message'] ?? []);
+        if (empty($pushName)) $pushName = $phoneNumber;
+        
+        // Em Evolution v2 a mensagem de fato e array: message.conversation, message.extendedTextMessage.text
+        $messageContent = $this->extractTextFromEvolutionMessage($messageObject);
 
         if (empty($messageContent)) {
             Log::warning("Evolution Webhook: Mensagem vazia ou tipo não suportado.");
