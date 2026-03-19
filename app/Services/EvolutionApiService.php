@@ -97,9 +97,6 @@ class EvolutionApiService
         }
     }
 
-    /**
-     * Envia uma mensagem de texto simples.
-     */
     public function sendText(string $apiUrl, string $apiKey, string $instanceName, string $number, string $text)
     {
         $endpoint = rtrim($apiUrl, '/') . "/message/sendText/{$instanceName}";
@@ -114,6 +111,45 @@ class EvolutionApiService
             return $response->json();
         } catch (\Exception $e) {
             Log::error("Evolution API Request Exception: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    public function sendMedia(string $apiUrl, string $apiKey, string $instanceName, string $number, string $base64, string $mediaType, string $fileName = '', string $caption = '')
+    {
+        $endpoint = rtrim($apiUrl, '/') . "/message/sendMedia/{$instanceName}";
+        
+        try {
+            $response = Http::withHeaders($this->getHeaders($apiKey))->post($endpoint, [
+                'number' => $number,
+                'mediatype' => $mediaType, // image, document, audio, video
+                'media' => $base64,
+                'fileName' => $fileName,
+                'caption' => $caption,
+                'delay' => 1200,
+            ]);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error("Evolution API Send Media Exception: " . $e->getMessage());
+            return null;
+        }
+    }
+    
+    public function sendAudio(string $apiUrl, string $apiKey, string $instanceName, string $number, string $base64)
+    {
+        $endpoint = rtrim($apiUrl, '/') . "/message/sendWhatsAppAudio/{$instanceName}";
+        
+        try {
+            $response = Http::withHeaders($this->getHeaders($apiKey))->post($endpoint, [
+                'number' => $number,
+                'audio' => $base64,
+                'delay' => 1200,
+            ]);
+
+            return $response->json();
+        } catch (\Exception $e) {
+            Log::error("Evolution API Send Audio Exception: " . $e->getMessage());
             return null;
         }
     }

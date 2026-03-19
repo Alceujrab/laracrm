@@ -36,11 +36,34 @@ class InboxController extends Controller
     public function sendMessage(Request $request, Conversation $conversation, \App\Services\EvolutionApiService $evolutionApi)
     {
         $request->validate([
-            'content' => 'required|string',
-            'type' => 'nullable|string|in:text,internal_note'
+            'content' => 'nullable|string',
+            'type' => 'nullable|string|in:text,internal_note,image,document,audio,video',
+            'file' => 'nullable|file|max:20480'
         ]);
 
         $type = $request->type ?? 'text';
+        $content = $request->content ?? '';
+        $attachmentUrl = null;
+        $base64 = null;
+        $fileName = '';
+
+        if ($request->hasFile('file')) {
+            $file = $request->file('file');
+            $path = $file->store('messages', 'public');
+            $attachmentUrl = '/storage/' . $path;
+            
+            $mime = $file->getMimeType();
+            if (str_starts_with($mime, 'image/')) $type = 'image';
+            elseif (str_starts_with($mime, 'audio/') || str_starts_with($mime, 'video/webm') || str_starts_with($mime, 'video/mp4')) {
+                // MediaRecorder default to video/webm even for audio in some webkits, we force audio if its voice
+                $type = $request->type === 'audio' ? 'audio' : 'video';
+            } else $type = 'document';
+
+            // evolution needs raw base64 with data uri header depending on version. We'll use data URI format to be safe.
+            $base64Data = base64_encode(file_get_contents($file->getRealPath()));
+            $base64 = "data:{$mime};base64,{$base64Data}";
+            $fileName = $file->getClientOriginalName();
+        }
 
         // Se NÃO for nota interna, despachamos para a Evolution API (WhatsApp)
         if ($type !== 'internal_note') {
@@ -59,7 +82,15 @@ class InboxController extends Controller
             if ($apiUrl && $apiKey && $instanceName) {
                 // Ignore failure if fake instance
                 try {
-                    $evolutionApi->sendText($apiUrl, $apiKey, $instanceName, $contact->phone, $request->content);
+                    if ($request->hasFile('file') && $base64) {
+                        if ($type === 'audio') {
+                            $evolutionApi->sendAudio($apiUrl, $apiKey, $instanceName, $contact->phone, $base64);
+                        } else {
+                            $evolutionApi->sendMedia($apiUrl, $apiKey, $instanceName, $contact->phone, $base64, $type, $fileName, $content);
+                        }
+                    } else if (!empty($content)) {
+                        $evolutionApi->sendText($apiUrl, $apiKey, $instanceName, $contact->phone, $content);
+                    }
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\Log::error("Seding via evolution failed: " . $e->getMessage());
                 }
@@ -71,8 +102,9 @@ class InboxController extends Controller
             'conversation_id' => $conversation->id,
             'sender_type' => 'user',
             'sender_id' => auth()->id(),
-            'content' => $request->content,
-            'type' => $type
+            'content' => $content,
+            'type' => $type,
+            'attachment_url' => $attachmentUrl
         ]);
 
         $conversation->update(['last_message_at' => now()]);

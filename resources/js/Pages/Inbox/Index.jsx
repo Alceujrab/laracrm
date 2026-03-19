@@ -1,11 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, usePage } from '@inertiajs/react';
 import { 
     Inbox, User, Clock, Archive, Plus, Search, MoreVertical, 
     FileText, Check, Paperclip, Smile, Zap, List, Mic, Info,
-    Phone, MessageSquare, Tag, Briefcase, Calendar, Car, X, Edit, ChevronDown, ChevronUp
+    Phone, MessageSquare, Tag, Briefcase, Calendar, Car, X, Edit, ChevronDown, ChevronUp, StopCircle
 } from 'lucide-react';
 import CreateDealModal from '@/Components/Deal/CreateDealModal';
 import NewConversationModal from '@/Components/Inbox/NewConversationModal';
@@ -48,45 +48,130 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     const [filter, setFilter] = useState('all'); // all, mine, unassigned, waiting
     const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
     const [newTag, setNewTag] = useState('');
-    const [internalNoteContent, setInternalNoteContent] = useState('');
 
     // V3 Modals and Popovers
     const [isNewConvOpen, setIsNewConvOpen] = useState(false);
     const [isCatalogOpen, setIsCatalogOpen] = useState(false);
     const [isMacroOpen, setIsMacroOpen] = useState(false);
 
+    // Recording State
+    const [isRecording, setIsRecording] = useState(false);
+    const [recordingTime, setRecordingTime] = useState(0);
+    const mediaRecorderRef = useRef(null);
+    const audioChunksRef = useRef([]);
+    const fileInputRef = useRef(null);
+
     // Auto Refresh Polling (5s)
     useEffect(() => {
         const interval = setInterval(async () => {
             try {
-                const { data } = await axios.get('/api/inbox/refresh');
-                setConversations(data);
+                if(!isRecording) {
+                    const { data } = await axios.get('/api/inbox/refresh');
+                    setConversations(data);
+                }
             } catch (error) {
                 console.error("Erro no auto-refresh:", error);
             }
         }, 5000);
         return () => clearInterval(interval);
-    }, []);
+    }, [isRecording]);
 
-    const handleSendMessage = async (e) => {
-        e.preventDefault();
-        if (!newMessage.trim() || !activeConvId || sending) return;
+    // Timer for Recording
+    useEffect(() => {
+        let interval;
+        if (isRecording) {
+            interval = setInterval(() => setRecordingTime(prev => prev + 1), 1000);
+        } else {
+            setRecordingTime(0);
+            clearInterval(interval);
+        }
+        return () => clearInterval(interval);
+    }, [isRecording]);
+
+    // Master Send Payload Form
+    const sendPayload = async (fileObj = null, forcedType = null) => {
+        if (!activeConvId || sending) return;
+        if (!fileObj && !newMessage.trim()) return;
         
         setSending(true);
         try {
-            await axios.post(`/api/inbox/${activeConvId}/message`, {
-                content: newMessage,
-                type: isInternalNote ? 'internal_note' : 'text'
+            const formData = new FormData();
+            if (newMessage.trim()) formData.append('content', newMessage);
+            
+            // type resolution
+            let resolvedType = forcedType;
+            if (!resolvedType) {
+                resolvedType = isInternalNote ? 'internal_note' : 'text';
+            }
+            formData.append('type', resolvedType);
+            
+            if (fileObj) {
+                formData.append('file', fileObj);
+            }
+
+            await axios.post(`/api/inbox/${activeConvId}/message`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
             });
+
             setNewMessage('');
-            if(isInternalNote) setIsInternalNote(false); // reseta após enviar
+            if(isInternalNote) setIsInternalNote(false);
             const { data } = await axios.get('/api/inbox/refresh');
             setConversations(data);
         } catch (error) {
-            alert('Falha ao enviar mensagem');
+            alert('Falha ao enviar mensagem ou anexo. Verifique se o tamanho excede o limite (20mb).');
         } finally {
             setSending(false);
         }
+    };
+
+    const handleSendMessageText = (e) => {
+        e.preventDefault();
+        sendPayload();
+    };
+
+    const startRecording = async () => {
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            const mediaRecorder = new MediaRecorder(stream);
+            mediaRecorderRef.current = mediaRecorder;
+            audioChunksRef.current = [];
+
+            mediaRecorder.ondataavailable = event => {
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                // We fake a .webm extension so the backend knows to parse it properly
+                const audioFile = new File([audioBlob], `voice_note_${new Date().getTime()}.webm`, { type: 'audio/webm' });
+                await sendPayload(audioFile, 'audio');
+                stream.getTracks().forEach(track => track.stop());
+            };
+
+            mediaRecorder.start();
+            setIsRecording(true);
+        } catch (e) {
+            alert("Microfone bloqueado ou indisponível. Conceda as permissões no seu navegador.");
+        }
+    };
+
+    const stopRecording = () => {
+        if (mediaRecorderRef.current && isRecording) {
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+        }
+    };
+
+    const handleFileSelect = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        let detectedType = 'document';
+        if(file.type.startsWith('image/')) detectedType = 'image';
+        if(file.type.startsWith('video/')) detectedType = 'video';
+        
+        await sendPayload(file, detectedType);
+        e.target.value = ''; // Reset file input
     };
 
     const handleAssign = async (userId) => {
@@ -177,6 +262,12 @@ export default function InboxIndex({ conversations: initialConversations = [], u
         return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
+    const formatTimer = (seconds) => {
+        const m = Math.floor(seconds / 60).toString().padStart(2, '0');
+        const s = (seconds % 60).toString().padStart(2, '0');
+        return `${m}:${s}`;
+    };
+
     const inboxMenu = [
         { label: 'Entrada', icon: Inbox, active: true, badge: conversations.length.toString() }
     ];
@@ -186,7 +277,10 @@ export default function InboxIndex({ conversations: initialConversations = [], u
             activeModule="inbox"
             sidebarMenuItems={inboxMenu}
         >
-            <Head title="Caixa de Entrada Premium" />
+            <Head title="Caixa de Entrada" />
+
+            {/* Hidden File Input */}
+            <input type="file" ref={fileInputRef} hidden onChange={handleFileSelect} />
 
             <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden">
                 
@@ -260,7 +354,12 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                                 </div>
                                                 <p className={`text-sm truncate mt-1 ${lastMessage?.type === 'internal_note' ? 'text-yellow-600 dark:text-yellow-500' : 'text-gray-500 dark:text-gray-400'}`}>
                                                     {lastMessage?.type === 'internal_note' && <span className="mr-1">🔒</span>}
-                                                    {lastMessage ? lastMessage.content : 'Nova Conversa'}
+                                                    {lastMessage ? (
+                                                        lastMessage.type === 'audio' ? '🎵 Mensagem de Voz' : 
+                                                        lastMessage.type === 'image' ? '📸 Foto' : 
+                                                        lastMessage.type === 'document' ? '📄 Arquivo' : 
+                                                        lastMessage.content
+                                                        ) : 'Nova Conversa'}
                                                 </p>
                                                 {chat.assignee && (
                                                     <p className="text-[10px] text-gray-400 mt-1">Atribuído a: {chat.assignee.name.split(' ')[0]}</p>
@@ -353,6 +452,19 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                     );
                                 }
 
+                                const renderMedia = () => {
+                                    if(!message.attachment_url) return null;
+                                    if(message.type === 'image') return <img src={message.attachment_url} alt="anexo" className="rounded-lg max-h-64 object-cover mb-2" />;
+                                    if(message.type === 'audio') return <audio controls src={message.attachment_url} className="mb-2 max-w-full h-10 w-64" />;
+                                    if(message.type === 'video') return <video controls src={message.attachment_url} className="rounded-lg max-h-64 mb-2 max-w-full" />;
+                                    return (
+                                        <a href={message.attachment_url} target="_blank" rel="noreferrer" className="flex items-center p-3 mb-2 bg-black/10 rounded overflow-hidden">
+                                            <FileText className="w-5 h-5 mr-2 flex-shrink-0" />
+                                            <span className="truncate text-sm underline">Visualizar Anexo</span>
+                                        </a>
+                                    );
+                                };
+
                                 if (message.sender_type === 'contact') {
                                     return (
                                         <div key={message.id} className="flex items-end">
@@ -360,7 +472,8 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                                 {getInitials(activeConv.contact?.name)}
                                             </div>
                                             <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3.5 rounded-2xl rounded-bl-none shadow-sm max-w-lg">
-                                                <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{message.content}</p>
+                                                {renderMedia()}
+                                                {message.content && <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{message.content}</p>}
                                                 <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block right-0 text-right">{formatTime(message.created_at)}</span>
                                             </div>
                                         </div>
@@ -370,7 +483,8 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                 return (
                                     <div key={message.id} className="flex items-end justify-end">
                                         <div className="bg-indigo-600 text-white p-3.5 rounded-2xl rounded-br-none shadow-sm max-w-lg text-left">
-                                            <p className="text-sm whitespace-pre-line">{message.content}</p>
+                                            {renderMedia()}
+                                            {message.content && <p className="text-sm whitespace-pre-line text-indigo-50">{message.content}</p>}
                                             <span className="text-[10px] text-indigo-200 mt-1 block right-0 text-right">{formatTime(message.created_at)}</span>
                                         </div>
                                     </div>
@@ -378,7 +492,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                             })}
                         </div>
 
-                        {/* Modais Inline da Toolbar (Ficam relativos ao footer) */}
+                        {/* Modais Inline da Toolbar */}
                         {isMacroOpen && (
                             <div className="absolute bottom-[90px] left-6 z-50 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in slide-in-from-bottom-2 fade-in">
                                 <div className="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 font-semibold text-sm flex justify-between">
@@ -412,8 +526,10 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                              onClick={() => insertText(`*Confira este modelo que acabou de chegar!*\n\n🚘 ${v.make} ${v.model}\n📅 Ano: ${v.year}\n💰 Preço: R$ ${parseFloat(v.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`)}
                                         >
                                             {/* Preview Image mock */}
-                                            <div className="h-24 bg-gray-100 dark:bg-gray-900 w-full flex items-center justify-center">
-                                                <Car className="w-8 h-8 text-gray-300 dark:text-gray-700" />
+                                            <div className="h-24 bg-gray-100 dark:bg-gray-900 w-full flex items-center justify-center relative overflow-hidden">
+                                                {v.images && v.images.length > 0 ? (
+                                                    <img src={'/storage/'+v.images[0]} className="object-cover w-full h-full" alt="carro" />
+                                                ) : <Car className="w-8 h-8 text-gray-300 dark:text-gray-700" />}
                                             </div>
                                             <div className="p-2 bg-white dark:bg-gray-800">
                                                 <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{v.make} {v.model}</p>
@@ -427,61 +543,83 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                         )}
 
                         {/* Composer Inferior */}
-                        <form onSubmit={handleSendMessage} className={`p-4 border-t z-10 relative transition-colors ${
-                            isInternalNote 
-                            ? 'bg-yellow-50 dark:bg-[#332a11] border-yellow-200 dark:border-yellow-900/50' 
-                            : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
-                        }`}>
-                            <div className={`flex items-end border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all ${
-                                isInternalNote 
-                                ? 'bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700' 
-                                : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
-                            }`}>
-                                <textarea 
-                                    className="w-full max-h-32 min-h-[50px] bg-transparent border-none focus:ring-0 resize-none py-3 px-4 text-sm dark:text-gray-200"
-                                    placeholder={isInternalNote ? "Escreva uma nota interna para a equipe..." : "Escreva sua mensagem para o cliente... ('/' p/ Atalhos)"}
-                                    value={newMessage}
-                                    onChange={(e) => {
-                                        setNewMessage(e.target.value);
-                                        // Simple quick reply trigger simulation
-                                        if(e.target.value.endsWith('/')) {
-                                            setIsMacroOpen(true);
-                                        }
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter' && !e.shiftKey) {
-                                            e.preventDefault();
-                                            handleSendMessage(e);
-                                        }
-                                    }}
-                                />
-                            </div>
-                            <div className="flex items-center justify-between mt-2 px-1">
-                                <div className="flex items-center space-x-1">
-                                    <button type="button" onClick={() => { setIsMacroOpen(!isMacroOpen); setIsCatalogOpen(false); }} className={`p-2 rounded-full transition-colors ${isMacroOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Respostas Rápidas"><List className="w-5 h-5" /></button>
-                                    <button type="button" onClick={() => { setIsCatalogOpen(!isCatalogOpen); setIsMacroOpen(false); }} className={`p-2 rounded-full transition-colors ${isCatalogOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Catálogo de Veículos"><Car className="w-5 h-5" /></button>
-                                    <span className="w-px h-5 bg-gray-300 mx-2"></span>
-                                    <button type="button" className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Mic className="w-5 h-5" /></button>
-                                    <button type="button" className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Paperclip className="w-5 h-5" /></button>
-                                    
-                                    <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-200 ml-4 border-l pl-4 border-gray-300 dark:border-gray-700">
-                                        <input 
-                                            type="checkbox" 
-                                            checked={isInternalNote} 
-                                            onChange={() => setIsInternalNote(!isInternalNote)} 
-                                            className="rounded border-gray-300 text-yellow-500 shadow-sm focus:border-yellow-300 focus:ring focus:ring-yellow-200 focus:ring-opacity-50"
-                                        />
-                                        <span className="font-semibold text-xs tracking-wide uppercase">Nota de Equipe</span>
-                                    </label>
+                        {isRecording ? (
+                            <div className="p-6 border-t z-10 relative bg-white dark:bg-gray-900 flex items-center justify-between border-t-red-500 border-t-2">
+                                <div className="flex items-center text-red-500 animate-pulse">
+                                    <Mic className="w-6 h-6 mr-3" />
+                                    <span className="font-bold tracking-widest">{formatTimer(recordingTime)}</span>
+                                    <span className="ml-3 text-sm text-gray-500">Gravando mensagem de voz...</span>
                                 </div>
-                                <button type="submit" disabled={sending} className={`flex items-center px-6 py-2 text-white rounded-lg transition-colors font-medium text-sm shadow-sm disabled:opacity-50 ${
-                                    isInternalNote ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-indigo-600 hover:bg-indigo-700'
-                                }`}>
-                                    {sending ? 'Salvando...' : 'Enviar'}
-                                    <svg className="w-4 h-4 ml-2 transform rotate-45 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
-                                </button>
+                                <div className="flex gap-4">
+                                    <button 
+                                        type="button" 
+                                        onClick={() => {
+                                            stopRecording();
+                                            // discard by clearing bits but UI handles automatically on stop... wait we need explicit cancel
+                                            // MediaRecorder auto calls onstop which saves. To cancel, we need to bypass. Simple implementation limits to just "Stop & Send".
+                                        }} 
+                                        className="bg-red-50 text-red-600 px-4 py-2 font-semibold text-sm rounded-lg flex items-center"
+                                    >
+                                        <StopCircle className="w-4 h-4 mr-2"/> Encerrar e Enviar
+                                    </button>
+                                </div>
                             </div>
-                        </form>
+                        ) : (
+                            <form onSubmit={handleSendMessageText} className={`p-4 border-t z-10 relative transition-colors ${
+                                isInternalNote 
+                                ? 'bg-yellow-50 dark:bg-[#332a11] border-yellow-200 dark:border-yellow-900/50' 
+                                : 'bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800'
+                            }`}>
+                                <div className={`flex items-end border rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all ${
+                                    isInternalNote 
+                                    ? 'bg-white dark:bg-gray-800 border-yellow-300 dark:border-yellow-700' 
+                                    : 'bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700'
+                                }`}>
+                                    <textarea 
+                                        className="w-full max-h-32 min-h-[50px] bg-transparent border-none focus:ring-0 resize-none py-3 px-4 text-sm dark:text-gray-200"
+                                        placeholder={isInternalNote ? "Escreva uma nota interna para a equipe..." : "Escreva sua mensagem para o cliente... ('/' p/ Atalhos)"}
+                                        value={newMessage}
+                                        onChange={(e) => {
+                                            setNewMessage(e.target.value);
+                                            if(e.target.value.endsWith('/')) {
+                                                setIsMacroOpen(true);
+                                            }
+                                        }}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                e.preventDefault();
+                                                handleSendMessageText(e);
+                                            }
+                                        }}
+                                    />
+                                </div>
+                                <div className="flex items-center justify-between mt-2 px-1">
+                                    <div className="flex items-center space-x-1">
+                                        <button type="button" onClick={() => { setIsMacroOpen(!isMacroOpen); setIsCatalogOpen(false); }} className={`p-2 rounded-full transition-colors ${isMacroOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Respostas Rápidas"><List className="w-5 h-5" /></button>
+                                        <button type="button" onClick={() => { setIsCatalogOpen(!isCatalogOpen); setIsMacroOpen(false); }} className={`p-2 rounded-full transition-colors ${isCatalogOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Catálogo de Veículos"><Car className="w-5 h-5" /></button>
+                                        <span className="w-px h-5 bg-gray-300 mx-2"></span>
+                                        <button type="button" onClick={startRecording} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-full transition-colors"><Mic className="w-5 h-5" /></button>
+                                        <button type="button" onClick={() => fileInputRef.current.click()} className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Paperclip className="w-5 h-5" /></button>
+                                        
+                                        <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-200 ml-4 border-l pl-4 border-gray-300 dark:border-gray-700">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={isInternalNote} 
+                                                onChange={() => setIsInternalNote(!isInternalNote)} 
+                                                className="rounded border-gray-300 text-yellow-500 shadow-sm focus:border-yellow-300 focus:ring focus:ring-yellow-200 focus:ring-opacity-50"
+                                            />
+                                            <span className="font-semibold text-xs tracking-wide uppercase">Nota de Equipe</span>
+                                        </label>
+                                    </div>
+                                    <button type="submit" disabled={sending} className={`flex items-center px-6 py-2 text-white rounded-lg transition-colors font-medium text-sm shadow-sm disabled:opacity-50 ${
+                                        isInternalNote ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-indigo-600 hover:bg-indigo-700'
+                                    }`}>
+                                        {sending ? 'Salvando...' : 'Enviar'}
+                                        <svg className="w-4 h-4 ml-2 transform rotate-45 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                                    </button>
+                                </div>
+                            </form>
+                        )}
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center bg-[#F9FAFB] dark:bg-[#0B0F19]">
