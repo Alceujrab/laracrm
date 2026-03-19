@@ -11,14 +11,34 @@ use App\Models\Deal;
 
 class CrmController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $stages = DealStage::orderBy('order')->with(['deals.contact', 'deals.vehicle', 'deals.assignee'])->get();
+        $search = $request->query('search');
+
+        $stages = DealStage::orderBy('order')->with(['deals' => function ($query) use ($search) {
+            $query->with(['contact', 'vehicle', 'assignee']);
+            
+            if ($search) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('title', 'like', "%{$search}%")
+                      ->orWhereHas('contact', function ($cq) use ($search) {
+                          $cq->where('name', 'like', "%{$search}%");
+                      })
+                      ->orWhereHas('vehicle', function ($vq) use ($search) {
+                          $vq->where('make', 'like', "%{$search}%")
+                            ->orWhere('model', 'like', "%{$search}%")
+                            ->orWhere('plate', 'like', "%{$search}%");
+                      });
+                });
+            }
+        }])->get();
+
         $vehicles = Vehicle::all();
 
         return Inertia::render('CRM/Index', [
             'stages' => $stages,
-            'vehicles' => $vehicles
+            'vehicles' => $vehicles,
+            'filters' => $request->only(['search'])
         ]);
     }
 
