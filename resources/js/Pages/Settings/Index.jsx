@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, usePage } from '@inertiajs/react';
 import { 
@@ -25,16 +26,75 @@ export default function SettingsIndex() {
         { label: 'Canais', icon: Share2, active: activeTab === 'canais', id: 'canais' },
     ];
 
-    const channels = [
-        { id: 1, name: 'WhatsApp Business', type: 'WhatsApp', status: 'connected', identifier: '+55 11 9999-9999', icon: Smartphone, color: 'text-green-500', bg: 'bg-green-100 dark:bg-green-900' },
-        { id: 2, name: 'Página Facebook', type: 'Messenger', status: 'connected', identifier: '@cfauto', icon: Facebook, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-900' },
-        { id: 3, name: 'Instagram DM', type: 'Instagram', status: 'error', identifier: '@cfautocrm', icon: Instagram, color: 'text-pink-500', bg: 'bg-pink-100 dark:bg-pink-900' },
-        { id: 4, name: 'Suporte E-mail', type: 'IMAP', status: 'disconnected', identifier: 'suporte@cfauto.com', icon: Mail, color: 'text-gray-500', bg: 'bg-gray-100 dark:bg-gray-800' },
-        { id: 5, name: 'Widget Site', type: 'Script', status: 'connected', identifier: 'website-widget-1', icon: LayoutTemplate, color: 'text-indigo-500', bg: 'bg-indigo-100 dark:bg-indigo-900' },
-    ];
+    const [channels, setChannels] = useState([]);
+    const [isAddRouteOpen, setIsAddRouteOpen] = useState(false);
+    const [newChannelName, setNewChannelName] = useState('');
+    const [qrCodeData, setQrCodeData] = useState(null);
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        if (activeTab === 'canais') {
+            fetchChannels();
+        }
+    }, [activeTab]);
+
+    const fetchChannels = async () => {
+        try {
+            const { data } = await axios.get('/api/channels');
+            setChannels(data);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleCreateChannel = async (e) => {
+        e.preventDefault();
+        setLoading(true);
+        try {
+            const { data } = await axios.post('/api/channels', { name: newChannelName });
+            setChannels([data, ...channels]);
+            setNewChannelName('');
+            setIsAddRouteOpen(false);
+            showQrCode(data);
+        } catch (error) {
+            alert('Erro ao criar canal. Verifique os logs.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const showQrCode = async (channel) => {
+        setQrCodeData({ channel, loading: true });
+        try {
+            const { data } = await axios.get(`/api/channels/${channel.id}/qrcode`);
+            if (data?.instance?.state === 'open') {
+                alert('Este canal já está devidamente conectado!');
+                setQrCodeData(null);
+                fetchChannels();
+            } else if (data?.qrcode?.base64) {
+                setQrCodeData({ channel, base64: data.qrcode.base64, loading: false });
+            } else {
+                // Em alguns casos a API demora uns segundinhos pro BAyLeis iniciar
+                setTimeout(() => showQrCode(channel), 3000);
+            }
+        } catch (error) {
+            setQrCodeData(null);
+            alert('Falha ao conectar na Evolution API para pegar o QRCode.');
+        }
+    };
+
+    const handleDeleteChannel = async (channel) => {
+        if (!confirm('Tem certeza? Isso irá desconectar o seu número e deletar a instância.')) return;
+        try {
+            await axios.delete(`/api/channels/${channel.id}`);
+            fetchChannels();
+        } catch (error) {
+            console.error(error);
+        }
+    };
 
     const renderCanais = () => (
-        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900/50">
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900/50 relative">
             <div className="px-8 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex justify-between items-center z-10">
                 <div>
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Canais de Atendimento</h1>
@@ -42,7 +102,10 @@ export default function SettingsIndex() {
                 </div>
                 
                 <div className="flex space-x-3">
-                    <button className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
+                    <button 
+                        onClick={() => setIsAddRouteOpen(true)}
+                        className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm"
+                    >
                         <Plus className="w-4 h-4 mr-2" /> 
                         Conectar Canal
                     </button>
@@ -50,35 +113,101 @@ export default function SettingsIndex() {
             </div>
 
             <div className="flex-1 overflow-y-auto p-8">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {channels.map(channel => {
-                        const Icon = channel.icon;
-                        return (
-                            <div key={channel.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                                <div className="flex justify-between items-start mb-4">
-                                    <div className={`p-3 rounded-lg ${channel.bg}`}>
-                                        <Icon className={`w-6 h-6 ${channel.color}`} />
+                {channels.length === 0 ? (
+                     <div className="text-center py-20 text-gray-500 dark:text-gray-400">
+                         Nenhum canal conectado ainda. Clique em "Conectar Canal" acima.
+                     </div>
+                ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {channels.map(channel => {
+                            return (
+                                <div key={channel.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                                    <div className="flex justify-between items-start mb-4">
+                                        <div className={`p-3 rounded-lg bg-green-100 dark:bg-green-900/40`}>
+                                            <Smartphone className={`w-6 h-6 text-green-500`} />
+                                        </div>
+                                        <span className={`px-2 py-1 text-xs font-bold uppercase rounded ${
+                                            channel.status === 'connected' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' :
+                                            'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400'
+                                        }`}>
+                                            {channel.status}
+                                        </span>
                                     </div>
-                                    <span className={`px-2 py-1 text-xs font-bold uppercase rounded ${
-                                        channel.status === 'connected' ? 'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-400' :
-                                        channel.status === 'error' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400' :
-                                        'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300'
-                                    }`}>
-                                        {channel.status === 'connected' ? 'Conectado' : channel.status === 'error' ? 'Erro' : 'Desconectado'}
-                                    </span>
+                                    <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{channel.name}</h3>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{channel.identifier}</p>
+                                    
+                                    <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-2">
+                                        {channel.status !== 'connected' && (
+                                            <button onClick={() => showQrCode(channel)} className="px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors">
+                                                Ler QR Code
+                                            </button>
+                                        )}
+                                        <button onClick={() => handleDeleteChannel(channel)} className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
+                                            Deletar
+                                        </button>
+                                    </div>
                                 </div>
-                                <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{channel.name}</h3>
-                                <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{channel.identifier}</p>
-                                
-                                <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-2">
-                                    <button className="px-3 py-1.5 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded transition-colors">Configurar</button>
-                                    <button className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">Desconectar</button>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
+                            );
+                        })}
+                    </div>
+                )}
             </div>
+
+            {/* Modal Create Channel */}
+            {isAddRouteOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Automação de Novo Canal</h3>
+                            <button onClick={() => setIsAddRouteOpen(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+                        </div>
+                        <form onSubmit={handleCreateChannel} className="p-6">
+                            <div className="mb-4">
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome do Setor / Caixa de Entrada</label>
+                                <input 
+                                    type="text" 
+                                    required
+                                    placeholder="Ex: Financeiro, Locadora, Contato Principal"
+                                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2.5"
+                                    value={newChannelName}
+                                    onChange={(e) => setNewChannelName(e.target.value)}
+                                />
+                                <p className="text-xs text-gray-500 mt-2">Iremos abrir uma instância nova na Evolution automaticamente e configurar os webhooks necessários para esse setor.</p>
+                            </div>
+                            <div className="flex justify-end pt-2">
+                                <button type="button" onClick={() => setIsAddRouteOpen(false)} className="mr-3 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancelar</button>
+                                <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm font-medium flex items-center">
+                                    {loading ? 'Preparando...' : 'Conectar Via QR Code'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal QR Code */}
+            {qrCodeData && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-sm shadow-2xl overflow-hidden flex flex-col items-center p-8 text-center border border-gray-200 dark:border-gray-700">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">Conectar WhatsApp</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Escaneie o QR Code abaixo com o seu WhatsApp para vincular a caixa: <strong>{qrCodeData.channel.name}</strong></p>
+                        
+                        <div className="bg-gray-100 dark:bg-white p-4 rounded-xl shadow-inner mb-6 flex items-center justify-center size-64">
+                            {qrCodeData.loading ? (
+                                <div className="text-gray-500 animate-pulse text-sm">Carregando instância na Evolution...</div>
+                            ) : qrCodeData.base64 ? (
+                                <img src={qrCodeData.base64} alt="Evolution API QR Code" className="w-full h-full object-contain" />
+                            ) : (
+                                <div className="text-red-500 text-sm">Nenhum QR base64 retornado.</div>
+                            )}
+                        </div>
+
+                        <button onClick={() => { setQrCodeData(null); fetchChannels(); }} className="w-full px-4 py-2 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white rounded-lg shadow-sm font-medium transition-colors">
+                            Concluído / Fechar
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 

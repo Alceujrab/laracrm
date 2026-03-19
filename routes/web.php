@@ -8,6 +8,7 @@ use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\DealStageController;
 use App\Http\Controllers\EvolutionWebhookController;
+use App\Http\Controllers\ChannelController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -52,6 +53,10 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/api/crm/stages/{stage}', [DealStageController::class, 'update'])->name('crm.stages.update');
     Route::delete('/api/crm/stages/{stage}', [DealStageController::class, 'destroy'])->name('crm.stages.destroy');
     Route::put('/api/crm/stages/reorder', [DealStageController::class, 'reorder'])->name('crm.stages.reorder');
+
+    // Channels Management
+    Route::apiResource('/api/channels', ChannelController::class)->only(['index', 'store', 'destroy']);
+    Route::get('/api/channels/{channel}/qrcode', [ChannelController::class, 'qrCode'])->name('channels.qrcode');
 });
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
