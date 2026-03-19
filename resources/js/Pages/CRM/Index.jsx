@@ -9,12 +9,14 @@ import {
 } from 'lucide-react';
 import Contatos from './Tabs/Contatos';
 import DealSlideOver from '@/Components/Deal/DealSlideOver';
+import CreateDealModal from '@/Components/Deal/CreateDealModal';
 import ConfiguracoesFunil from './Tabs/ConfiguracoesFunil';
 import Sortable from 'sortablejs';
 
 export default function CRMIndex({ stages = [], filters = {} }) {
     const [activeTab, setActiveTab] = useState('negociacoes');
     const [selectedDealId, setSelectedDealId] = useState(null);
+    const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const containerRefs = useRef([]);
     const sortablesRefs = useRef([]);
@@ -29,7 +31,7 @@ export default function CRMIndex({ stages = [], filters = {} }) {
     const sidebarAction = {
         label: '+ Novo Negócio',
         icon: null,
-        onClick: () => console.log('Add deal modal')
+        onClick: () => setIsCreateModalOpen(true)
     };
 
     const formatCurrency = (value) => {
@@ -124,8 +126,8 @@ export default function CRMIndex({ stages = [], filters = {} }) {
                     <button className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
                         <Filter className="w-4 h-4 mr-2" /> Filtros
                     </button>
-                    <button className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                        <Plus className="w-4 h-4 mr-2" /> Criar Funil
+                    <button onClick={() => setActiveTab('configuracoes')} className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+                        <Settings className="w-4 h-4 mr-2" /> Configurar Funil
                     </button>
                 </div>
             </div>
@@ -247,6 +249,12 @@ export default function CRMIndex({ stages = [], filters = {} }) {
                 isOpen={!!selectedDealId} 
                 dealId={selectedDealId} 
                 onClose={() => setSelectedDealId(null)} 
+            />
+
+            <CreateDealModal 
+                isOpen={isCreateModalOpen} 
+                onClose={() => setIsCreateModalOpen(false)} 
+                stages={stages} 
             />
         </AuthenticatedLayout>
     );

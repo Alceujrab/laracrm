@@ -42,6 +42,22 @@ class CrmController extends Controller
         ]);
     }
 
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string|max:255',
+            'value' => 'nullable|numeric|min:0',
+            'deal_stage_id' => 'required|exists:deal_stages,id',
+            'status' => 'required|in:open,won,lost',
+        ]);
+
+        $validated['assigned_to'] = auth()->id();
+
+        Deal::create($validated);
+
+        return redirect()->back()->with('success', 'Negociação criada com sucesso!');
+    }
+
     public function moveDeal(Request $request, Deal $deal)
     {
         $request->validate([
