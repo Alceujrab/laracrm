@@ -57,10 +57,16 @@ export default function SettingsIndex() {
         setLoading(true);
         try {
             const { data } = await axios.post('/api/channels', newChannelForm);
-            setChannels([data, ...channels]);
+            setChannels([data.channel, ...channels]);
             setNewChannelForm({ name: '', api_url: 'https://api.elitesuporte.com.br', api_key: '', instance_name: '' });
             setIsAddRouteOpen(false);
-            showQrCode(data);
+            
+            // Se já veio conectado do backend (pois a sessão já estava viva na evolution)
+            if (data.channel.status === 'connected') {
+                alert(`Canal conectado com sucesso! O Webhook que você precisa caso deseje apontar manualmente é:\n\n${data.webhook_url}`);
+            } else {
+                showQrCode(data.channel);
+            }
         } catch (error) {
             alert('Erro ao configurar canal com servidor Evolution: ' + (error.response?.data?.error || error.message));
         } finally {
@@ -139,16 +145,26 @@ export default function SettingsIndex() {
                                         </span>
                                     </div>
                                     <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{channel.name}</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{channel.identifier}</p>
+                                    <p className="text-sm text-gray-500 dark:text-gray-400 mb-2 truncate" title={channel.identifier}>{channel.identifier}</p>
                                     
                                     <div className="pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-2">
+                                        <button 
+                                            onClick={() => {
+                                                const webhook = `${window.location.origin}/api/webhooks/evolution`;
+                                                navigator.clipboard.writeText(webhook);
+                                                alert(`Endereço do Webhook copiado:\n${webhook}\n\nSe preferir, cole este link na sua Evolution para receber as mensagens.`);
+                                            }} 
+                                            className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
+                                        >
+                                            Copiar Webhook
+                                        </button>
                                         {channel.status !== 'connected' && (
                                             <button onClick={() => showQrCode(channel)} className="px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors">
                                                 Ler QR Code
                                             </button>
                                         )}
                                         <button onClick={() => handleDeleteChannel(channel)} className="px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 rounded transition-colors">
-                                            Deletar
+                                            Remover
                                         </button>
                                     </div>
                                 </div>

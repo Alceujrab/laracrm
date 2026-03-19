@@ -34,30 +34,44 @@ class ChannelController extends Controller
         $apiKey = $request->api_key;
         $identifier = $request->instance_name;
 
-        // 1. Criar a Instância na Evolution API
+        // 1. Tentar Criar a Instância na Evolution API
         $createData = $this->evolution->createInstance($apiUrl, $apiKey, $identifier);
 
+        // Se o erro for que já existe, ignoramos e prosseguimos
+        $errorMsg = $createData['message'] ?? '';
         if (isset($createData['error']) && $createData['error'] === true) {
-            return response()->json(['error' => 'Falha ao criar instância na Evolution API', 'details' => $createData], 500);
+            if (is_string($errorMsg) && stripos($errorMsg, 'already exists') === false && stripos($errorMsg, 'já existe') === false && stripos($errorMsg, 'exist') === false) {
+                return response()->json(['error' => 'Falha ao criar/acessar instância na Evolution API', 'details' => $createData], 500);
+            }
         }
 
-        // 2. Configurar o Webhook
+        // 2. Configurar o Webhook Automaticamente
         $webhookUrl = url('/api/webhooks/evolution');
         $this->evolution->setWebhook($apiUrl, $apiKey, $identifier, $webhookUrl);
 
-        // 3. Salvar no Banco
+        // 3. Checar se já está Open para não pedir QR Code
+        $status = 'connecting';
+        $connectData = $this->evolution->connectInstance($apiUrl, $apiKey, $identifier);
+        if (isset($connectData['instance']['state']) && $connectData['instance']['state'] === 'open') {
+            $status = 'connected';
+        }
+
+        // 4. Salvar no Banco
         $channel = Channel::create([
             'name' => $request->name,
             'type' => 'whatsapp',
             'identifier' => $identifier,
-            'status' => 'connecting', // Precisa ler QR code ainda
+            'status' => $status,
             'credentials' => [
                 'evolution_url' => $apiUrl,
                 'api_key' => $apiKey
             ]
         ]);
 
-        return response()->json($channel, 201);
+        return response()->json([
+            'channel' => $channel,
+            'webhook_url' => $webhookUrl
+        ], 201);
     }
 
     public function qrCode(Channel $channel)
