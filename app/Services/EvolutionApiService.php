@@ -7,19 +7,10 @@ use Illuminate\Support\Facades\Log;
 
 class EvolutionApiService
 {
-    protected string $baseUrl;
-    protected string $globalApiKey;
-
-    public function __construct()
-    {
-        $this->baseUrl = config('services.evolution.url', env('EVOLUTION_API_URL', 'http://localhost:8080'));
-        $this->globalApiKey = config('services.evolution.token', env('EVOLUTION_API_TOKEN', 'your-global-apikey'));
-    }
-
-    private function getHeaders()
+    private function getHeaders(string $apiKey)
     {
         return [
-            'apikey' => $this->globalApiKey,
+            'apikey' => $apiKey,
             'Content-Type' => 'application/json'
         ];
     }
@@ -27,12 +18,12 @@ class EvolutionApiService
     /**
      * Cria uma nova instância no Evolution API
      */
-    public function createInstance(string $instanceName)
+    public function createInstance(string $apiUrl, string $apiKey, string $instanceName)
     {
-        $endpoint = rtrim($this->baseUrl, '/') . "/instance/create";
+        $endpoint = rtrim($apiUrl, '/') . "/instance/create";
         
         try {
-            $response = Http::withHeaders($this->getHeaders())->post($endpoint, [
+            $response = Http::withHeaders($this->getHeaders($apiKey))->post($endpoint, [
                 'instanceName' => $instanceName,
                 'qrcode' => true,
                 'integration' => 'WHATSAPP-BAILEYS'
@@ -48,12 +39,12 @@ class EvolutionApiService
     /**
      * Configura o Webhook de uma instância
      */
-    public function setWebhook(string $instanceName, string $webhookUrl)
+    public function setWebhook(string $apiUrl, string $apiKey, string $instanceName, string $webhookUrl)
     {
-        $endpoint = rtrim($this->baseUrl, '/') . "/webhook/set/{$instanceName}";
+        $endpoint = rtrim($apiUrl, '/') . "/webhook/set/{$instanceName}";
         
         try {
-            $response = Http::withHeaders($this->getHeaders())->post($endpoint, [
+            $response = Http::withHeaders($this->getHeaders($apiKey))->post($endpoint, [
                 'webhook' => [
                     'enabled' => true,
                     'url' => $webhookUrl,
@@ -77,12 +68,12 @@ class EvolutionApiService
     /**
      * Recupera o estado da conexao / QR Code
      */
-    public function connectInstance(string $instanceName)
+    public function connectInstance(string $apiUrl, string $apiKey, string $instanceName)
     {
-        $endpoint = rtrim($this->baseUrl, '/') . "/instance/connect/{$instanceName}";
+        $endpoint = rtrim($apiUrl, '/') . "/instance/connect/{$instanceName}";
         
         try {
-            $response = Http::withHeaders($this->getHeaders())->get($endpoint);
+            $response = Http::withHeaders($this->getHeaders($apiKey))->get($endpoint);
             return $response->json();
         } catch (\Exception $e) {
             Log::error("Evolution API Connect Instance Exception: " . $e->getMessage());
@@ -93,12 +84,12 @@ class EvolutionApiService
     /**
      * Deleta (ou desconecta) uma instancia
      */
-    public function deleteInstance(string $instanceName)
+    public function deleteInstance(string $apiUrl, string $apiKey, string $instanceName)
     {
-        $endpoint = rtrim($this->baseUrl, '/') . "/instance/delete/{$instanceName}";
+        $endpoint = rtrim($apiUrl, '/') . "/instance/delete/{$instanceName}";
         
         try {
-            $response = Http::withHeaders($this->getHeaders())->delete($endpoint);
+            $response = Http::withHeaders($this->getHeaders($apiKey))->delete($endpoint);
             return $response->json();
         } catch (\Exception $e) {
             Log::error("Evolution API Delete Instance Exception: " . $e->getMessage());
@@ -109,12 +100,12 @@ class EvolutionApiService
     /**
      * Envia uma mensagem de texto simples.
      */
-    public function sendText(string $instanceName, string $number, string $text)
+    public function sendText(string $apiUrl, string $apiKey, string $instanceName, string $number, string $text)
     {
-        $endpoint = rtrim($this->baseUrl, '/') . "/message/sendText/{$instanceName}";
+        $endpoint = rtrim($apiUrl, '/') . "/message/sendText/{$instanceName}";
         
         try {
-            $response = Http::withHeaders($this->getHeaders())->post($endpoint, [
+            $response = Http::withHeaders($this->getHeaders($apiKey))->post($endpoint, [
                 'number' => $number,
                 'text' => $text,
                 'delay' => 1200, // delay to simulate typing

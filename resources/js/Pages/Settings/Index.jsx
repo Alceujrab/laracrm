@@ -28,7 +28,12 @@ export default function SettingsIndex() {
 
     const [channels, setChannels] = useState([]);
     const [isAddRouteOpen, setIsAddRouteOpen] = useState(false);
-    const [newChannelName, setNewChannelName] = useState('');
+    const [newChannelForm, setNewChannelForm] = useState({
+        name: '',
+        api_url: 'https://api.elitesuporte.com.br',
+        api_key: '',
+        instance_name: ''
+    });
     const [qrCodeData, setQrCodeData] = useState(null);
     const [loading, setLoading] = useState(false);
 
@@ -51,13 +56,13 @@ export default function SettingsIndex() {
         e.preventDefault();
         setLoading(true);
         try {
-            const { data } = await axios.post('/api/channels', { name: newChannelName });
+            const { data } = await axios.post('/api/channels', newChannelForm);
             setChannels([data, ...channels]);
-            setNewChannelName('');
+            setNewChannelForm({ name: '', api_url: 'https://api.elitesuporte.com.br', api_key: '', instance_name: '' });
             setIsAddRouteOpen(false);
             showQrCode(data);
         } catch (error) {
-            alert('Erro ao criar canal. Verifique os logs.');
+            alert('Erro ao configurar canal com servidor Evolution: ' + (error.response?.data?.error || error.message));
         } finally {
             setLoading(false);
         }
@@ -161,20 +166,47 @@ export default function SettingsIndex() {
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white">Automação de Novo Canal</h3>
                             <button onClick={() => setIsAddRouteOpen(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
                         </div>
-                        <form onSubmit={handleCreateChannel} className="p-6">
-                            <div className="mb-4">
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">Nome do Setor / Caixa de Entrada</label>
-                                <input 
-                                    type="text" 
-                                    required
-                                    placeholder="Ex: Financeiro, Locadora, Contato Principal"
-                                    className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2.5"
-                                    value={newChannelName}
-                                    onChange={(e) => setNewChannelName(e.target.value)}
-                                />
-                                <p className="text-xs text-gray-500 mt-2">Iremos abrir uma instância nova na Evolution automaticamente e configurar os webhooks necessários para esse setor.</p>
+                        <form onSubmit={handleCreateChannel} className="p-6 overflow-y-auto max-h-[70vh]">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome de Exibição do Setor</label>
+                                    <input 
+                                        type="text" required placeholder="Ex: Financeiro"
+                                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2.5"
+                                        value={newChannelForm.name}
+                                        onChange={(e) => setNewChannelForm({...newChannelForm, name: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">URL Base da Evolution API</label>
+                                    <input 
+                                        type="url" required placeholder="https://api.suaevolution.com"
+                                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2.5"
+                                        value={newChannelForm.api_url}
+                                        onChange={(e) => setNewChannelForm({...newChannelForm, api_url: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Global API Key (Token)</label>
+                                    <input 
+                                        type="text" required placeholder="Cole a Global API Key aqui"
+                                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2.5"
+                                        value={newChannelForm.api_key}
+                                        onChange={(e) => setNewChannelForm({...newChannelForm, api_key: e.target.value})}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome da Instância (Identifier)</label>
+                                    <input 
+                                        type="text" required placeholder="Ex: vendedora_suely_01"
+                                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2.5"
+                                        value={newChannelForm.instance_name}
+                                        onChange={(e) => setNewChannelForm({...newChannelForm, instance_name: e.target.value})}
+                                    />
+                                    <p className="text-xs text-gray-500 mt-2">Iremos abrir ou configurar os webhooks na instância escolhida automaticamente.</p>
+                                </div>
                             </div>
-                            <div className="flex justify-end pt-2">
+                            <div className="flex justify-end pt-6">
                                 <button type="button" onClick={() => setIsAddRouteOpen(false)} className="mr-3 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancelar</button>
                                 <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm font-medium flex items-center">
                                     {loading ? 'Preparando...' : 'Conectar Via QR Code'}

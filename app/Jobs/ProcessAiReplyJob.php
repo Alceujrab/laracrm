@@ -82,14 +82,19 @@ class ProcessAiReplyJob implements ShouldQueue
             // 4. Disparar via Evolution API
             $this->conversation->load('channel', 'contact');
             
-            $instanceName = $this->conversation->channel->identifier;
+            $channel = $this->conversation->channel;
+            $instanceName = $channel->identifier;
             $phoneNumber = $this->conversation->contact->phone;
 
-            if ($instanceName && $phoneNumber) {
+            $credentials = $channel->credentials ?? [];
+            $apiUrl = $credentials['evolution_url'] ?? null;
+            $apiKey = $credentials['api_key'] ?? null;
+
+            if ($instanceName && $phoneNumber && $apiUrl && $apiKey) {
                 Log::info("Disparando envio Evolution API de {$instanceName} para {$phoneNumber}");
-                $evolutionApi->sendText($instanceName, $phoneNumber, $replyText);
+                $evolutionApi->sendText($apiUrl, $apiKey, $instanceName, $phoneNumber, $replyText);
             } else {
-                Log::warning("Não foi possível enviar a mensagem para Evolution: Canal ou Phone ausente.");
+                Log::warning("Não foi possível enviar a mensagem para Evolution: Canal, URL, API Key ou Phone ausente.");
             }
 
         } catch (\Exception $e) {
