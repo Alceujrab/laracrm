@@ -6,6 +6,7 @@ use App\Http\Controllers\CrmController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\DealStageController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -40,6 +41,12 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/settings', function () {
         return Inertia::render('Settings/Index');
     })->name('settings.index');
+
+    // CRM Stages Management
+    Route::post('/api/crm/stages', [DealStageController::class, 'store'])->name('crm.stages.store');
+    Route::put('/api/crm/stages/{stage}', [DealStageController::class, 'update'])->name('crm.stages.update');
+    Route::delete('/api/crm/stages/{stage}', [DealStageController::class, 'destroy'])->name('crm.stages.destroy');
+    Route::put('/api/crm/stages/reorder', [DealStageController::class, 'reorder'])->name('crm.stages.reorder');
 });
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

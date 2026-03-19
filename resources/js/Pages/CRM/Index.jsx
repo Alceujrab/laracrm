@@ -1,9 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, router } from '@inertiajs/react';
-import { Briefcase, CheckSquare, Users, Award, Target, Plus, MoreHorizontal, Filter, Search, Calendar } from 'lucide-react';
+import {
+    LayoutDashboard, Users, User, Phone, Mail, Calendar,
+    Search, Filter, Plus, ChevronRight, MoreHorizontal,
+    MessageCircle, Clock, AlertCircle, TrendingUp,
+    CheckCircle2, GripVertical, Settings
+} from 'lucide-react';
 import Contatos from './Tabs/Contatos';
 import DealSlideOver from '@/Components/Deal/DealSlideOver';
+import ConfiguracoesFunil from './Tabs/ConfiguracoesFunil';
 import Sortable from 'sortablejs';
 
 export default function CRMIndex({ stages = [], filters = {} }) {
@@ -14,11 +20,10 @@ export default function CRMIndex({ stages = [], filters = {} }) {
     const sortablesRefs = useRef([]);
 
     const crmMenu = [
-        { label: 'Negociações', icon: Briefcase, active: activeTab === 'negociacoes', id: 'negociacoes' },
-        { label: 'Tarefas', icon: CheckSquare, active: activeTab === 'tarefas', id: 'tarefas' },
-        { label: 'Contatos', icon: Users, active: activeTab === 'contatos', id: 'contatos' },
-        { label: 'Campanhas', icon: Award, active: activeTab === 'campanhas', id: 'campanhas' },
-        { label: 'Metas', icon: Target, active: activeTab === 'metas', id: 'metas' },
+        { label: 'Negociações', icon: <LayoutDashboard className="w-5 h-5" />, id: 'negociacoes' },
+        { label: 'Propostas', icon: <TrendingUp className="w-5 h-5" />, id: 'propostas' },
+        { label: 'Ganhos', icon: <CheckCircle2 className="w-5 h-5" />, id: 'ganhos' },
+        { label: 'Configurações', icon: <Settings className="w-5 h-5" />, id: 'configuracoes' },
     ];
 
     const sidebarAction = {
@@ -79,15 +84,15 @@ export default function CRMIndex({ stages = [], filters = {} }) {
 
         return cleanup;
     }, [stages, activeTab]);
-    
+
     // Search Debounce Logic
     useEffect(() => {
         const delayDebounceFn = setTimeout(() => {
-            router.get(route('crm.index'), 
-                { search: searchTerm }, 
-                { 
-                    preserveState: true, 
-                    replace: true, 
+            router.get(route('crm.index'),
+                { search: searchTerm },
+                {
+                    preserveState: true,
+                    replace: true,
                     preserveScroll: true
                 }
             );
@@ -104,14 +109,14 @@ export default function CRMIndex({ stages = [], filters = {} }) {
                     <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Funil de Vendas</h1>
                     <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Gerencie suas negociações arrastando os cards pelos estágios.</p>
                 </div>
-                
+
                 <div className="flex space-x-3">
                     <div className="relative">
                         <Search className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
-                        <input 
-                            type="text" 
-                            placeholder="Buscar negócio..." 
-                            className="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 w-64 dark:text-gray-200 transition-all font-medium" 
+                        <input
+                            type="text"
+                            placeholder="Buscar negócio..."
+                            className="pl-10 pr-4 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 w-64 dark:text-gray-200 transition-all font-medium"
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                         />
@@ -215,11 +220,7 @@ export default function CRMIndex({ stages = [], filters = {} }) {
         >
             <Head title={`CRM - ${activeTab}`} />
 
-            {activeTab === 'negociacoes' && renderNegociacoes()}
-            {activeTab === 'contatos' && <Contatos />}
-            {activeTab === 'tarefas' && renderPlaceholder('Gerenciamento de Tarefas', 'Agendamentos e to-dos focados em lembretes para ações e follow-ups com contatos.')}
-            {activeTab === 'campanhas' && renderPlaceholder('Disparos de Campanhas Outbound', 'Fluxo Wizard Modal de + Nova Campanha com canais WhatsApp, E-mail ou SMS integrados.')}
-            {activeTab === 'metas' && renderPlaceholder('Metas do Equipe', 'Indicadores Gauge e Termômetros avaliando performance da equipe via R$.')}
+            {renderContent()}
 
             <DealSlideOver 
                 isOpen={!!selectedDealId} 

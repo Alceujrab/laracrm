@@ -22,6 +22,7 @@
         "vite": "^6.0.11"
     },
     "dependencies": {
+        "d3-shape": "^3.2.0",
         "immer": "^11.1.4",
         "lucide-react": "^0.577.0",
         "recharts": "^2.15.0",
