@@ -10,4 +10,9 @@ export default defineConfig({
         }),
         react(),
     ],
+    resolve: {
+        alias: {
+            'recharts': 'recharts/es6'
+        }
+    }
 });
