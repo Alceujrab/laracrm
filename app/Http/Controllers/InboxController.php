@@ -15,7 +15,9 @@ class InboxController extends Controller
             'users' => \App\Models\User::orderBy('name')->get(),
             'deals' => \App\Models\Deal::where('status', 'open')->orderBy('title')->get(),
             'contacts' => \App\Models\Contact::orderBy('name')->get(),
-            'stages' => \App\Models\DealStage::orderBy('order')->get()
+            'stages' => \App\Models\DealStage::orderBy('order')->get(),
+            'vehicles' => \App\Models\Vehicle::where('status', 'available')->orderBy('make')->get(),
+            'channels' => \App\Models\Channel::where('is_active', true)->get()
         ]);
     }
 
@@ -97,5 +99,30 @@ class InboxController extends Controller
         $request->validate(['tags' => 'array']);
         $contact->update(['tags' => $request->tags]);
         return response()->json(['success' => true]);
+    }
+
+    public function storeConversation(Request $request)
+    {
+        $request->validate([
+            'contact_id' => 'required|exists:contacts,id',
+            'channel_id' => 'required|exists:channels,id'
+        ]);
+
+        $existing = Conversation::where('contact_id', $request->contact_id)
+                    ->where('status', 'open')
+                    ->first();
+
+        if ($existing) {
+            return response()->json($existing);
+        }
+
+        $conversation = Conversation::create([
+            'channel_id' => $request->channel_id,
+            'contact_id' => $request->contact_id,
+            'status' => 'open',
+            'last_message_at' => now()
+        ]);
+
+        return response()->json($conversation);
     }
 }

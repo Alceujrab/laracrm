@@ -5,11 +5,37 @@ import { Head, usePage } from '@inertiajs/react';
 import { 
     Inbox, User, Clock, Archive, Plus, Search, MoreVertical, 
     FileText, Check, Paperclip, Smile, Zap, List, Mic, Info,
-    Phone, MessageSquare, Tag, Briefcase, Calendar, Car, X
+    Phone, MessageSquare, Tag, Briefcase, Calendar, Car, X, Edit, ChevronDown, ChevronUp
 } from 'lucide-react';
 import CreateDealModal from '@/Components/Deal/CreateDealModal';
+import NewConversationModal from '@/Components/Inbox/NewConversationModal';
 
-export default function InboxIndex({ conversations: initialConversations = [], users = [], deals = [], contacts = [], stages = [] }) {
+/* Macros pre-definidas */
+const MACROS = [
+    { title: 'Saudação Padrão', text: 'Olá! Como vai? Sou seu consultor da CF Auto. Como posso te auxiliar com seu novo veículo hoje?' },
+    { title: 'Localização', text: 'Nossa loja fica muito bem localizada! Venha tomar um café conosco e conhecer nosso estoque: [Link do Maps]' },
+    { title: 'Financiamento', text: 'Trabalhamos com todas as financeiras e garantimos as melhores taxas do mercado. Vamos fazer uma simulação sem compromisso?' }
+];
+
+const Accordion = ({ title, icon: Icon, defaultOpen = false, children }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+    return (
+        <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-100 dark:border-gray-800 mb-4 overflow-hidden">
+            <button 
+                onClick={() => setIsOpen(!isOpen)} 
+                className="w-full flex items-center justify-between p-4 bg-white hover:bg-gray-50 dark:bg-gray-900 dark:hover:bg-gray-800/80 transition-colors"
+            >
+                <div className="flex items-center text-sm font-bold text-gray-800 dark:text-gray-200 uppercase tracking-wider">
+                    {Icon && <Icon className="w-4 h-4 mr-2 text-indigo-500" />} {title}
+                </div>
+                {isOpen ? <ChevronUp className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+            </button>
+            {isOpen && <div className="p-4 border-t border-gray-100 dark:border-gray-800">{children}</div>}
+        </div>
+    );
+};
+
+export default function InboxIndex({ conversations: initialConversations = [], users = [], deals = [], contacts = [], stages = [], vehicles = [], channels = [] }) {
     const { auth } = usePage().props;
     const [conversations, setConversations] = useState(initialConversations);
     const [isContactPanelOpen, setIsContactPanelOpen] = useState(true);
@@ -22,6 +48,12 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     const [filter, setFilter] = useState('all'); // all, mine, unassigned, waiting
     const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
     const [newTag, setNewTag] = useState('');
+    const [internalNoteContent, setInternalNoteContent] = useState('');
+
+    // V3 Modals and Popovers
+    const [isNewConvOpen, setIsNewConvOpen] = useState(false);
+    const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+    const [isMacroOpen, setIsMacroOpen] = useState(false);
 
     // Auto Refresh Polling (5s)
     useEffect(() => {
@@ -113,6 +145,12 @@ export default function InboxIndex({ conversations: initialConversations = [], u
         }
     };
 
+    const insertText = (text) => {
+        setNewMessage(prev => prev + (prev.length > 0 ? '\n' : '') + text);
+        setIsMacroOpen(false);
+        setIsCatalogOpen(false);
+    };
+
     const filteredConversations = conversations.filter(c => {
         if (filter === 'mine') return c.assigned_to === auth.user.id;
         if (filter === 'unassigned') return !c.assigned_to;
@@ -148,18 +186,25 @@ export default function InboxIndex({ conversations: initialConversations = [], u
             activeModule="inbox"
             sidebarMenuItems={inboxMenu}
         >
-            <Head title="Caixa de Entrada" />
+            <Head title="Caixa de Entrada Premium" />
 
             <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden">
                 
                 {/* 1. Lista de Conversas */}
-                <div className="w-80 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col flex-shrink-0">
+                <div className="w-80 border-r border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col flex-shrink-0 z-20">
                     <div className="p-4 border-b border-gray-200 dark:border-gray-800">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-lg font-semibold text-gray-800 dark:text-gray-100">Conversas</h2>
                             <div className="flex space-x-2">
+                                <button 
+                                    onClick={() => setIsNewConvOpen(true)}
+                                    className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-800 rounded bg-indigo-50 text-indigo-600 dark:bg-indigo-900/40 dark:text-indigo-400 transition-colors"
+                                    title="Nova Conversa"
+                                >
+                                    <Edit className="w-5 h-5" />
+                                </button>
                                 <button className="p-1 hover:bg-gray-100 dark:hover:bg-gray-800 rounded text-gray-500 transition-colors">
-                                    <Plus className="w-5 h-5" />
+                                    <MoreVertical className="w-5 h-5" />
                                 </button>
                             </div>
                         </div>
@@ -176,7 +221,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                             <input 
                                 type="text" 
                                 placeholder="Pesquisar..." 
-                                className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800 border-none rounded-md text-sm focus:ring-1 focus:ring-indigo-500 dark:text-gray-200"
+                                className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-1 focus:ring-indigo-500 dark:text-gray-200"
                             />
                         </div>
                     </div>
@@ -236,7 +281,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
 
                 {/* 2. Área de Chat Master */}
                 {activeConv ? (
-                    <div className="flex-1 flex flex-col bg-[#F9FAFB] dark:bg-[#0B0F19] relative min-w-0">
+                    <div className="flex-1 flex flex-col bg-[#F9FAFB] dark:bg-[#0B0F19] relative min-w-0 z-10">
                         {/* Header Chat */}
                         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex items-center justify-between shadow-sm z-10">
                             <div className="flex items-center">
@@ -261,7 +306,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                             <div className="flex items-center space-x-3">
                                 
                                 <select 
-                                    className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md py-1.5 pl-3 pr-8 focus:ring-indigo-500" 
+                                    className="text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-md py-1.5 pl-3 pr-8 focus:ring-indigo-500 outline-none" 
                                     value={activeConv.assigned_to || ''}
                                     onChange={(e) => handleAssign(e.target.value)}
                                 >
@@ -297,11 +342,11 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                 if (message.type === 'internal_note') {
                                     return (
                                         <div key={message.id} className="flex justify-center max-w-2xl mx-auto">
-                                            <div className="bg-yellow-50 dark:bg-[#332a11] border border-yellow-200 dark:border-yellow-900/50 p-2.5 rounded-lg w-full flex items-start">
-                                                <Info className="w-4 h-4 text-yellow-600 dark:text-yellow-500 mt-0.5 mr-2" />
+                                            <div className="bg-yellow-50 dark:bg-[#332a11] border border-yellow-200 dark:border-yellow-900/50 p-3 rounded-xl w-full flex items-start shadow-sm">
+                                                <Info className="w-5 h-5 text-yellow-600 dark:text-yellow-500 mt-0.5 mr-3 flex-shrink-0" />
                                                 <div>
-                                                    <p className="text-xs font-semibold text-yellow-800 dark:text-yellow-400">Nota Interna</p>
-                                                    <p className="text-sm text-yellow-900 dark:text-yellow-200 mt-0.5 whitespace-pre-line">{message.content}</p>
+                                                    <p className="text-xs font-bold text-yellow-800 dark:text-yellow-400 uppercase tracking-widest">Nota Interna Visível Apenas Para a Equipe</p>
+                                                    <p className="text-sm text-yellow-900 dark:text-yellow-200 mt-1 whitespace-pre-line">{message.content}</p>
                                                 </div>
                                             </div>
                                         </div>
@@ -314,7 +359,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                             <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex-shrink-0 flex items-center justify-center text-xs text-indigo-700 dark:text-indigo-300 font-bold mr-2">
                                                 {getInitials(activeConv.contact?.name)}
                                             </div>
-                                            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3 rounded-2xl rounded-bl-none shadow-sm max-w-lg">
+                                            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3.5 rounded-2xl rounded-bl-none shadow-sm max-w-lg">
                                                 <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{message.content}</p>
                                                 <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block right-0 text-right">{formatTime(message.created_at)}</span>
                                             </div>
@@ -324,7 +369,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
 
                                 return (
                                     <div key={message.id} className="flex items-end justify-end">
-                                        <div className="bg-indigo-600 text-white p-3 rounded-2xl rounded-br-none shadow-sm max-w-lg text-left">
+                                        <div className="bg-indigo-600 text-white p-3.5 rounded-2xl rounded-br-none shadow-sm max-w-lg text-left">
                                             <p className="text-sm whitespace-pre-line">{message.content}</p>
                                             <span className="text-[10px] text-indigo-200 mt-1 block right-0 text-right">{formatTime(message.created_at)}</span>
                                         </div>
@@ -332,6 +377,54 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                 );
                             })}
                         </div>
+
+                        {/* Modais Inline da Toolbar (Ficam relativos ao footer) */}
+                        {isMacroOpen && (
+                            <div className="absolute bottom-[90px] left-6 z-50 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in slide-in-from-bottom-2 fade-in">
+                                <div className="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 font-semibold text-sm flex justify-between">
+                                    Respostas Rápidas
+                                    <button onClick={() => setIsMacroOpen(false)} className="text-gray-400"><X className="w-4 h-4"/></button>
+                                </div>
+                                <div className="max-h-64 overflow-y-auto p-2">
+                                    {MACROS.map((m, i) => (
+                                        <button 
+                                            key={i} 
+                                            onClick={() => insertText(m.text)}
+                                            className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors border-b border-transparent hover:border-gray-100 dark:hover:border-gray-600 mb-1"
+                                        >
+                                            <p className="font-semibold text-sm text-gray-800 dark:text-gray-200">{m.title}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{m.text}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {isCatalogOpen && (
+                            <div className="absolute bottom-[90px] left-20 z-50 w-[400px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in slide-in-from-bottom-2 fade-in">
+                                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/50 border-b border-indigo-100 dark:border-indigo-800 font-semibold text-sm flex justify-between text-indigo-800 dark:text-indigo-200">
+                                    <div className="flex items-center"><Car className="w-4 h-4 mr-2"/> Catálogo de Veículos</div>
+                                    <button onClick={() => setIsCatalogOpen(false)} className="text-indigo-400"><X className="w-4 h-4"/></button>
+                                </div>
+                                <div className="max-h-80 overflow-y-auto p-3 grid grid-cols-2 gap-3">
+                                    {vehicles.map(v => (
+                                        <div key={v.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden group hover:border-indigo-500 cursor-pointer transition-colors"
+                                             onClick={() => insertText(`*Confira este modelo que acabou de chegar!*\n\n🚘 ${v.make} ${v.model}\n📅 Ano: ${v.year}\n💰 Preço: R$ ${parseFloat(v.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`)}
+                                        >
+                                            {/* Preview Image mock */}
+                                            <div className="h-24 bg-gray-100 dark:bg-gray-900 w-full flex items-center justify-center">
+                                                <Car className="w-8 h-8 text-gray-300 dark:text-gray-700" />
+                                            </div>
+                                            <div className="p-2 bg-white dark:bg-gray-800">
+                                                <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{v.make} {v.model}</p>
+                                                <p className="text-[10px] text-gray-500">{v.year}</p>
+                                                <p className="text-xs font-bold text-green-600 dark:text-green-400 mt-1">R$ {parseFloat(v.price).toLocaleString('pt-BR')}</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Composer Inferior */}
                         <form onSubmit={handleSendMessage} className={`p-4 border-t z-10 relative transition-colors ${
@@ -346,9 +439,15 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                             }`}>
                                 <textarea 
                                     className="w-full max-h-32 min-h-[50px] bg-transparent border-none focus:ring-0 resize-none py-3 px-4 text-sm dark:text-gray-200"
-                                    placeholder={isInternalNote ? "Escreva uma nota interna para a equipe..." : "Escreva sua mensagem para o cliente..."}
+                                    placeholder={isInternalNote ? "Escreva uma nota interna para a equipe..." : "Escreva sua mensagem para o cliente... ('/' p/ Atalhos)"}
                                     value={newMessage}
-                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onChange={(e) => {
+                                        setNewMessage(e.target.value);
+                                        // Simple quick reply trigger simulation
+                                        if(e.target.value.endsWith('/')) {
+                                            setIsMacroOpen(true);
+                                        }
+                                    }}
                                     onKeyDown={(e) => {
                                         if (e.key === 'Enter' && !e.shiftKey) {
                                             e.preventDefault();
@@ -358,18 +457,24 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                 />
                             </div>
                             <div className="flex items-center justify-between mt-2 px-1">
-                                <div className="flex items-center space-x-4">
-                                    <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-200">
+                                <div className="flex items-center space-x-1">
+                                    <button type="button" onClick={() => { setIsMacroOpen(!isMacroOpen); setIsCatalogOpen(false); }} className={`p-2 rounded-full transition-colors ${isMacroOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Respostas Rápidas"><List className="w-5 h-5" /></button>
+                                    <button type="button" onClick={() => { setIsCatalogOpen(!isCatalogOpen); setIsMacroOpen(false); }} className={`p-2 rounded-full transition-colors ${isCatalogOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Catálogo de Veículos"><Car className="w-5 h-5" /></button>
+                                    <span className="w-px h-5 bg-gray-300 mx-2"></span>
+                                    <button type="button" className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Mic className="w-5 h-5" /></button>
+                                    <button type="button" className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Paperclip className="w-5 h-5" /></button>
+                                    
+                                    <label className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400 cursor-pointer hover:text-gray-900 dark:hover:text-gray-200 ml-4 border-l pl-4 border-gray-300 dark:border-gray-700">
                                         <input 
                                             type="checkbox" 
                                             checked={isInternalNote} 
                                             onChange={() => setIsInternalNote(!isInternalNote)} 
-                                            className="rounded border-gray-300 text-indigo-600 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                                            className="rounded border-gray-300 text-yellow-500 shadow-sm focus:border-yellow-300 focus:ring focus:ring-yellow-200 focus:ring-opacity-50"
                                         />
-                                        <span>🔒 Nota Interna</span>
+                                        <span className="font-semibold text-xs tracking-wide uppercase">Nota de Equipe</span>
                                     </label>
                                 </div>
-                                <button type="submit" disabled={sending} className={`flex items-center px-4 py-2 text-white rounded-lg transition-colors font-medium text-sm shadow-sm disabled:opacity-50 ${
+                                <button type="submit" disabled={sending} className={`flex items-center px-6 py-2 text-white rounded-lg transition-colors font-medium text-sm shadow-sm disabled:opacity-50 ${
                                     isInternalNote ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-indigo-600 hover:bg-indigo-700'
                                 }`}>
                                     {sending ? 'Salvando...' : 'Enviar'}
@@ -386,11 +491,11 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                     </div>
                 )}
 
-                {/* 3. Painel Lateral Direito (CRM & Detalhes) */}
+                {/* 3. Painel Lateral Direito (CRM & Detalhes c/ Accordions) */}
                 {isContactPanelOpen && activeConv && (
-                    <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col flex-shrink-0">
-                        <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col items-center">
-                            <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 text-3xl font-bold mb-4">
+                    <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col flex-shrink-0 z-20">
+                        <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col items-center bg-gray-50/50 dark:bg-gray-900">
+                            <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 text-3xl font-bold mb-4 shadow-sm ring-4 ring-white dark:ring-gray-800">
                                 {getInitials(activeConv.contact?.name)}
                             </div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{activeConv.contact?.name || 'Desconhecido'}</h3>
@@ -399,56 +504,91 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                             <div className="w-full mt-2">
                                 <button 
                                     onClick={() => setIsCreateDealModalOpen(true)}
-                                    className="w-full flex justify-center items-center py-2.5 bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 dark:bg-indigo-900/30 dark:border-indigo-800/30 dark:hover:bg-indigo-900/50 text-indigo-700 dark:text-indigo-400 rounded-lg transition-colors text-sm font-semibold shadow-sm"
+                                    className="w-full flex justify-center items-center py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-semibold shadow-sm"
                                 >
                                     <Briefcase className="w-4 h-4 mr-2" /> 
-                                    + Negócio no CRM
+                                    Transformar em Negócio
                                 </button>
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                        <div className="flex-1 overflow-y-auto p-4">
                             
-                            {/* Tags Section */}
-                            <div className="bg-gray-50 dark:bg-gray-800/50 rounded-lg p-4 border border-gray-100 dark:border-gray-800">
-                                <h4 className="flex items-center text-sm font-bold text-gray-800 dark:text-gray-200 mb-3 uppercase tracking-wider">
-                                    <Tag className="w-4 h-4 mr-2 text-indigo-500" /> Etiquetas (Tags)
-                                </h4>
-                                
-                                <div className="flex flex-wrap gap-2 mb-4">
-                                    {activeConv.contact?.tags ? activeConv.contact.tags.map((tag, i) => (
-                                        <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 text-xs rounded-md font-medium flex items-center">
-                                            {tag}
-                                            <button onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500"><X className="w-3 h-3"/></button>
-                                        </span>
-                                    )) : <span className="text-xs text-gray-400">Nenhuma tag...</span>}
-                                </div>
+                            {/* Accordion Contato */}
+                            <Accordion title="Contato" icon={User} defaultOpen={true}>
+                                <div className="space-y-4">
+                                    <div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400">E-mail</p>
+                                        <p className="text-sm text-gray-800 dark:text-gray-200 font-medium">{activeConv.contact?.email || '--'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">Etiquetas (Tags)</p>
+                                        <div className="flex flex-wrap gap-2 mb-3">
+                                            {activeConv.contact?.tags ? activeConv.contact.tags.map((tag, i) => (
+                                                <span key={i} className="px-2 py-1 bg-blue-100 text-blue-800 dark:bg-blue-900/40 dark:text-blue-300 text-xs rounded-md font-medium flex items-center">
+                                                    {tag}
+                                                    <button onClick={() => handleRemoveTag(tag)} className="ml-1 hover:text-red-500"><X className="w-3 h-3"/></button>
+                                                </span>
+                                            )) : <span className="text-xs text-gray-400 italic">Nenhuma tag...</span>}
+                                        </div>
 
-                                <form onSubmit={handleAddTag} className="flex gap-2">
-                                    <input 
-                                        type="text" 
-                                        placeholder="Nova Etiqueta" 
-                                        value={newTag}
-                                        onChange={e => setNewTag(e.target.value)}
-                                        className="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-900 dark:text-white focus:ring-indigo-500 focus:border-indigo-500"
-                                    />
-                                    <button type="submit" className="px-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 transition-colors">
-                                        +
-                                    </button>
-                                </form>
-                            </div>
+                                        <form onSubmit={handleAddTag} className="flex gap-2">
+                                            <input 
+                                                type="text" 
+                                                placeholder="Nova Etiqueta" 
+                                                value={newTag}
+                                                onChange={e => setNewTag(e.target.value)}
+                                                className="w-full text-xs px-2 py-1.5 border border-gray-300 dark:border-gray-700 rounded-md dark:bg-gray-900 dark:text-white focus:ring-indigo-500 focus:border-indigo-500"
+                                            />
+                                            <button type="submit" className="px-3 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md hover:bg-gray-300 transition-colors">
+                                                +
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </Accordion>
+
+                            {/* Accordion Negócios */}
+                            <Accordion title="Negociações no CRM" icon={Briefcase}>
+                                <div className="text-sm text-gray-500 text-center py-4 italic">
+                                    Nenhuma negociação aberta identificada diretamente.
+                                </div>
+                            </Accordion>
+
+                            {/* Accordion Notas */}
+                            <Accordion title="Arquivo de Notas" icon={FileText}>
+                                <div className="space-y-2">
+                                    <textarea 
+                                        className="w-full text-xs bg-gray-50 border border-gray-200 rounded p-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                        rows="4"
+                                        placeholder="Anotações fixas do lead..."
+                                    ></textarea>
+                                    <button className="w-full bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-semibold py-1.5 rounded transition">Salvar Anotação</button>
+                                </div>
+                            </Accordion>
 
                         </div>
                     </div>
                 )}
             </div>
 
-            {/* Modal de Criação de Negócio reaproveitando do CRM */}
+            {/* Modais Globais */}
             <CreateDealModal 
                 isOpen={isCreateDealModalOpen} 
                 onClose={() => setIsCreateDealModalOpen(false)}
                 contacts={contacts}
                 stages={stages}
+            />
+
+            <NewConversationModal 
+                isOpen={isNewConvOpen}
+                onClose={() => setIsNewConvOpen(false)}
+                contacts={contacts}
+                channels={channels}
+                onSuccess={(newConv) => {
+                    setActiveConvId(newConv.id);
+                    axios.get('/api/inbox/refresh').then(({data}) => setConversations(data));
+                }}
             />
 
         </AuthenticatedLayout>

@@ -50,6 +50,7 @@ Route::middleware(['auth'])->group(function () {
     // Inbox
     Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
     Route::get('/api/inbox/refresh', [InboxController::class, 'refresh'])->name('inbox.refresh');
+    Route::post('/api/inbox/conversations', [InboxController::class, 'storeConversation'])->name('inbox.conversations.store');
     Route::post('/api/inbox/{conversation}/message', [InboxController::class, 'sendMessage'])->name('inbox.send');
     Route::put('/api/inbox/{conversation}/assign', [InboxController::class, 'assign'])->name('inbox.assign');
     Route::put('/api/inbox/{conversation}/status', [InboxController::class, 'updateStatus'])->name('inbox.status');
