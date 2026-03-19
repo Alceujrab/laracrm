@@ -6,6 +6,10 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
     const [deal, setDeal] = useState(null);
     const [loading, setLoading] = useState(false);
     const [activeTab, setActiveTab] = useState('resumo'); // resumo, tarefas, historico
+    const [isAddingTask, setIsAddingTask] = useState(false);
+    const [newTaskTitle, setNewTaskTitle] = useState('');
+    const [newTaskDueDate, setNewTaskDueDate] = useState('');
+    const [actionLoading, setActionLoading] = useState(null); // stores taskId being toggled/deleted
 
     useEffect(() => {
         if (isOpen && dealId) {
@@ -18,6 +22,62 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                 .finally(() => setLoading(false));
         }
     }, [isOpen, dealId]);
+
+    const handleAddTask = async (e) => {
+        e.preventDefault();
+        if (!newTaskTitle.trim()) return;
+
+        try {
+            const response = await axios.post(route('api.tasks.store', { deal: dealId }), {
+                title: newTaskTitle,
+                due_date: newTaskDueDate || null
+            });
+            
+            // Update local state
+            setDeal(prev => ({
+                ...prev,
+                tasks: [response.data, ...(prev.tasks || [])]
+            }));
+            
+            setNewTaskTitle('');
+            setNewTaskDueDate('');
+            setIsAddingTask(false);
+        } catch (error) {
+            console.error("Error adding task:", error);
+        }
+    };
+
+    const handleToggleTask = async (taskId) => {
+        setActionLoading(taskId);
+        try {
+            const response = await axios.put(route('api.tasks.toggle', { task: taskId }));
+            setDeal(prev => ({
+                ...prev,
+                tasks: prev.tasks.map(t => t.id === taskId ? response.data : t)
+            }));
+        } catch (error) {
+            console.error("Error toggling task:", error);
+        } finally {
+            setActionLoading(null);
+        }
+    };
+
+    const handleDeleteTask = async (taskId) => {
+        if (!confirm('Excluir esta tarefa?')) return;
+        
+        setActionLoading(taskId);
+        try {
+            await axios.delete(route('api.tasks.destroy', { task: taskId }));
+            setDeal(prev => ({
+                ...prev,
+                tasks: prev.tasks.filter(t => t.id !== taskId)
+            }));
+        } catch (error) {
+            console.error("Error deleting task:", error);
+        } finally {
+            setActionLoading(null);
+        }
+    };
 
     const formatCurrency = (value) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
@@ -160,20 +220,64 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
 
                                     {activeTab === 'tarefas' && (
                                         <div className="space-y-4">
-                                            <button className="w-full flex items-center justify-center px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors">
-                                                <CheckSquare className="w-4 h-4 mr-2" />
-                                                Adicionar Nova Tarefa
-                                            </button>
+                                            {!isAddingTask ? (
+                                                <button 
+                                                    onClick={() => setIsAddingTask(true)}
+                                                    className="w-full flex items-center justify-center px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
+                                                >
+                                                    <CheckSquare className="w-4 h-4 mr-2" />
+                                                    Adicionar Nova Tarefa
+                                                </button>
+                                            ) : (
+                                                <form onSubmit={handleAddTask} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-indigo-100 dark:border-indigo-900/30 space-y-3">
+                                                    <input 
+                                                        autoFocus
+                                                        type="text" 
+                                                        placeholder="O que precisa ser feito?"
+                                                        value={newTaskTitle}
+                                                        onChange={(e) => setNewTaskTitle(e.target.value)}
+                                                        className="w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-indigo-500"
+                                                    />
+                                                    <div className="flex space-x-2">
+                                                        <input 
+                                                            type="date"
+                                                            value={newTaskDueDate}
+                                                            onChange={(e) => setNewTaskDueDate(e.target.value)}
+                                                            className="flex-1 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 rounded-md text-xs focus:ring-indigo-500"
+                                                        />
+                                                        <button type="submit" className="px-3 py-1 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700">Salvar</button>
+                                                        <button 
+                                                            type="button" 
+                                                            onClick={() => setIsAddingTask(false)}
+                                                            className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium"
+                                                        >
+                                                            Cancelar
+                                                        </button>
+                                                    </div>
+                                                </form>
+                                            )}
 
                                             {deal.tasks && deal.tasks.length > 0 ? (
                                                 <div className="space-y-3 mt-4">
                                                     {deal.tasks.map(task => (
-                                                        <div key={task.id} className="flex items-start bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700">
-                                                            <input type="checkbox" className="mt-1 flex-shrink-0 w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500" checked={task.is_completed} readOnly />
-                                                            <div className="ml-3">
-                                                                <p className={`text-sm font-medium ${task.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>{task.title}</p>
-                                                                {task.due_date && <p className="text-xs text-gray-500 mt-1">Prazo: {new Date(task.due_date).toLocaleDateString()}</p>}
+                                                        <div key={task.id} className="flex items-start group bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-200 transition-colors">
+                                                            <input 
+                                                                type="checkbox" 
+                                                                className="mt-1 flex-shrink-0 w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" 
+                                                                checked={task.is_completed} 
+                                                                onChange={() => handleToggleTask(task.id)}
+                                                                disabled={actionLoading === task.id}
+                                                            />
+                                                            <div className="ml-3 flex-1 min-w-0">
+                                                                <p className={`text-sm font-medium truncate ${task.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>{task.title}</p>
+                                                                {task.due_date && <p className="text-xs text-gray-500 mt-1 flex items-center"><Calendar className="w-3 h-3 mr-1" /> {new Date(task.due_date).toLocaleDateString()}</p>}
                                                             </div>
+                                                            <button 
+                                                                onClick={() => handleDeleteTask(task.id)}
+                                                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
+                                                            >
+                                                                <X className="w-4 h-4" />
+                                                            </button>
                                                         </div>
                                                     ))}
                                                 </div>
