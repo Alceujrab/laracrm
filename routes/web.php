@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\InboxController;
 use App\Http\Controllers\CrmController;
 use App\Http\Controllers\VehicleController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -30,9 +31,7 @@ Route::middleware(['auth'])->group(function () {
     
     Route::get('/catalog', [VehicleController::class, 'index'])->name('catalog.index');
 
-    Route::get('/reports', function () {
-        return Inertia::render('Reports/Index');
-    })->name('reports.index');
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
     Route::get('/settings', function () {
         return Inertia::render('Settings/Index');
