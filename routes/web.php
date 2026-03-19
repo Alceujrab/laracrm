@@ -57,6 +57,11 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/crm/deals/{deal}/move', [CrmController::class, 'moveDeal'])->name('crm.deals.move');
     Route::get('/api/crm/deals/{deal}', [CrmController::class, 'show'])->name('api.crm.deals.show');
     Route::post('/api/crm/deals/{deal}/tasks', [TaskController::class, 'store'])->name('api.tasks.store');
+    
+    // Tasks Module
+    Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::post('/tasks', [TaskController::class, 'storeGlobal'])->name('tasks.store_global');
+    
     Route::put('/api/tasks/{task}/toggle', [TaskController::class, 'toggle'])->name('api.tasks.toggle');
     Route::delete('/api/tasks/{task}', [TaskController::class, 'destroy'])->name('api.tasks.destroy');
     

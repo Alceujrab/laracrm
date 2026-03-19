@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, usePage } from '@inertiajs/react';
 import { 
     Search, Mail, Users, Car, BarChart2, Settings, 
-    Bell, Calendar, AtSign, ChevronDown
+    Bell, Calendar, AtSign, ChevronDown, CheckSquare
 } from 'lucide-react';
 import Dropdown from '@/Components/Dropdown';
 
@@ -13,6 +13,7 @@ export default function Topbar({ activeModule = 'inbox' }) {
     const modules = [
         { id: 'inbox', label: 'Caixa de Entrada', icon: Mail, route: 'inbox.index' },
         { id: 'crm', label: 'CRM', icon: Users, route: 'crm.index' },
+        { id: 'tasks', label: 'Tarefas', icon: CheckSquare, route: 'tasks.index' },
         { id: 'catalog', label: 'Catálogo de Veículos', icon: Car, route: 'catalog.index' },
         { id: 'reports', label: 'Relatórios', icon: BarChart2, route: 'reports.index' },
         { id: 'settings', label: 'Configurações', icon: Settings, route: 'settings.index' },
