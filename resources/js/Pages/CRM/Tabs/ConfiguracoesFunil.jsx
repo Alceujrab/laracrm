@@ -26,6 +26,10 @@ export default function ConfiguracoesFunil({ stages = [] }) {
     const { data, setData, post, put, delete: destroy, processing, reset, errors } = useForm({
         name: '',
         color: '#6366F1',
+        rules: {
+            require_phone: false,
+            require_tasks_completed: false
+        }
     });
 
     useEffect(() => {
@@ -68,7 +72,11 @@ export default function ConfiguracoesFunil({ stages = [] }) {
         setEditingStage(stage);
         setData({
             name: stage.name,
-            color: stage.color || '#6366F1'
+            color: stage.color || '#6366F1',
+            rules: stage.rules || {
+                require_phone: false,
+                require_tasks_completed: false
+            }
         });
     };
 
@@ -200,6 +208,47 @@ export default function ConfiguracoesFunil({ stages = [] }) {
                                             {data.color === color.value && <Check className="w-5 h-5 text-white drop-shadow-sm" />}
                                         </button>
                                     ))}
+                                </div>
+                            </div>
+
+                            {/* Regras Dinâmicas do Estágio */}
+                            <div className="pt-2 border-t border-gray-100 dark:border-gray-700">
+                                <label className="block text-sm font-bold text-gray-900 dark:text-white mb-4">
+                                    Regras e Restrições do Estágio
+                                </label>
+                                
+                                <div className="space-y-4">
+                                    <label className="flex items-start gap-3 cursor-pointer group">
+                                        <div className="relative flex items-center justify-center mt-1">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={data.rules.require_phone}
+                                                onChange={e => setData('rules', { ...data.rules, require_phone: e.target.checked })}
+                                                className="peer sr-only" 
+                                            />
+                                            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-indigo-600 transition-colors">Exigir Telefone Cadastrado</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Impede que o negócio seja movido para cá se o contato não possuir número de telefone.</p>
+                                        </div>
+                                    </label>
+
+                                    <label className="flex items-start gap-3 cursor-pointer group">
+                                        <div className="relative flex items-center justify-center mt-1">
+                                            <input 
+                                                type="checkbox" 
+                                                checked={data.rules.require_tasks_completed}
+                                                onChange={e => setData('rules', { ...data.rules, require_tasks_completed: e.target.checked })}
+                                                className="peer sr-only" 
+                                            />
+                                            <div className="w-10 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-gray-900 dark:text-white group-hover:text-indigo-600 transition-colors">Exigir Tarefas Concluídas</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400">Bloqueia a mudança de estágio se houver atividades/tarefas pendentes no card.</p>
+                                        </div>
+                                    </label>
                                 </div>
                             </div>
 

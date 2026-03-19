@@ -64,6 +64,32 @@ class CrmController extends Controller
             'deal_stage_id' => 'required|exists:deal_stages,id'
         ]);
 
+        $targetStage = DealStage::find($request->deal_stage_id);
+        
+        // Kanban Dynamic Rules Validation
+        if ($targetStage && $targetStage->rules) {
+            $rules = $targetStage->rules;
+            
+            // Rule 1: Require Phone
+            if (isset($rules['require_phone']) && $rules['require_phone']) {
+                $deal->load('contact');
+                if (!$deal->contact || empty(trim($deal->contact->phone))) {
+                    return back()->withErrors(['message' => 'Ação bloqueada: Este estágio exige que o contato possua um telefone cadastrado.']);
+                }
+            }
+            
+            // Rule 2: Require Tasks Completed
+            if (isset($rules['require_tasks_completed']) && $rules['require_tasks_completed']) {
+                if (method_exists($deal, 'tasks')) {
+                    $deal->load('tasks');
+                    $hasOpenTasks = $deal->tasks->where('status', 'pending')->count() > 0;
+                    if ($hasOpenTasks) {
+                        return back()->withErrors(['message' => 'Ação bloqueada: Resolva todas as tarefas pendentes antes de mover para este estágio.']);
+                    }
+                }
+            }
+        }
+
         $deal->update([
             'deal_stage_id' => $request->deal_stage_id
         ]);

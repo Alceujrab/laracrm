@@ -5,7 +5,7 @@ import {
     LayoutDashboard, Users, User, Phone, Mail, Calendar,
     Search, Filter, Plus, ChevronRight, MoreHorizontal,
     MessageCircle, Clock, AlertCircle, TrendingUp,
-    CheckCircle2, GripVertical, Settings
+    CheckCircle2, GripVertical, Settings, X
 } from 'lucide-react';
 import Contatos from './Tabs/Contatos';
 import DealSlideOver from '@/Components/Deal/DealSlideOver';
@@ -18,6 +18,7 @@ export default function CRMIndex({ stages = [], filters = {} }) {
     const [selectedDealId, setSelectedDealId] = useState(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
+    const [errorToast, setErrorToast] = useState(null);
     const containerRefs = useRef([]);
     const sortablesRefs = useRef([]);
 
@@ -74,7 +75,16 @@ export default function CRMIndex({ stages = [], filters = {} }) {
                                 // Sync API - Sortable already moved the DOM element
                                 router.put(route('crm.deals.move', { deal: dealId }), {
                                     deal_stage_id: destStageId
-                                }, { preserveScroll: true, preserveState: false });
+                                }, { 
+                                    preserveScroll: true, 
+                                    preserveState: false, // Força re-render para recuar o card ao lugar certo se falhar
+                                    onError: (errors) => {
+                                        if (errors.message) {
+                                            setErrorToast(errors.message);
+                                            setTimeout(() => setErrorToast(null), 6000);
+                                        }
+                                    }
+                                });
                             }
                         }
                     });
@@ -242,6 +252,18 @@ export default function CRMIndex({ stages = [], filters = {} }) {
             sidebarAction={sidebarAction}
         >
             <Head title={`CRM - ${activeTab}`} />
+
+            {errorToast && (
+                <div className="fixed top-4 right-4 z-[100] animate-in slide-in-from-top-2 fade-in duration-300">
+                    <div className="bg-red-50 dark:bg-red-900/50 border-l-4 border-red-500 p-4 rounded-r-lg shadow-xl flex items-center max-w-md">
+                        <AlertCircle className="w-6 h-6 text-red-500 mr-3 flex-shrink-0" />
+                        <p className="text-sm font-medium text-red-800 dark:text-red-200 leading-tight">{errorToast}</p>
+                        <button onClick={() => setErrorToast(null)} className="ml-3 text-red-500 hover:text-red-700 bg-red-100 dark:bg-red-900 rounded-full p-1 opacity-80 hover:opacity-100 transition-opacity">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                </div>
+            )}
 
             {renderContent()}
 

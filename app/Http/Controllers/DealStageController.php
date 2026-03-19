@@ -13,6 +13,7 @@ class DealStageController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'color' => 'nullable|string|max:20',
+            'rules' => 'nullable|array',
         ]);
 
         $maxOrder = DealStage::max('order') ?? 0;
@@ -20,6 +21,7 @@ class DealStageController extends Controller
         $stage = DealStage::create([
             'name' => $validated['name'],
             'color' => $validated['color'] ?? '#6B7280',
+            'rules' => $validated['rules'] ?? null,
             'order' => $maxOrder + 1,
         ]);
 
@@ -31,6 +33,7 @@ class DealStageController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'color' => 'nullable|string|max:20',
+            'rules' => 'nullable|array',
         ]);
 
         $stage->update($validated);
