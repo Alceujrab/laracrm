@@ -20,10 +20,10 @@ export default function CRMIndex({ stages = [], filters = {} }) {
     const sortablesRefs = useRef([]);
 
     const crmMenu = [
-        { label: 'Negociações', icon: <LayoutDashboard className="w-5 h-5" />, id: 'negociacoes' },
-        { label: 'Propostas', icon: <TrendingUp className="w-5 h-5" />, id: 'propostas' },
-        { label: 'Ganhos', icon: <CheckCircle2 className="w-5 h-5" />, id: 'ganhos' },
-        { label: 'Configurações', icon: <Settings className="w-5 h-5" />, id: 'configuracoes' },
+        { label: 'Negociações', icon: LayoutDashboard, active: activeTab === 'negociacoes', id: 'negociacoes' },
+        { label: 'Propostas', icon: TrendingUp, active: activeTab === 'propostas', id: 'propostas' },
+        { label: 'Ganhos', icon: CheckCircle2, active: activeTab === 'ganhos', id: 'ganhos' },
+        { label: 'Configurações', icon: Settings, active: activeTab === 'configuracoes', id: 'configuracoes' },
     ];
 
     const sidebarAction = {
