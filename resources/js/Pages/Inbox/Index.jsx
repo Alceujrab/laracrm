@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head } from '@inertiajs/react';
 import { 
@@ -7,9 +8,44 @@ import {
     Phone, MessageSquare, Tag, Briefcase, Calendar, Car
 } from 'lucide-react';
 
-export default function InboxIndex({ conversations = [] }) {
+export default function InboxIndex({ conversations: initialConversations = [] }) {
+    const [conversations, setConversations] = useState(initialConversations);
     const [isContactPanelOpen, setIsContactPanelOpen] = useState(true);
     const [activeConvId, setActiveConvId] = useState(conversations.length > 0 ? conversations[0].id : null);
+    const [newMessage, setNewMessage] = useState('');
+    const [sending, setSending] = useState(false);
+
+    // Auto Refresh Polling (5s)
+    useEffect(() => {
+        const interval = setInterval(async () => {
+            try {
+                const { data } = await axios.get('/api/inbox/refresh');
+                setConversations(data);
+            } catch (error) {
+                console.error("Erro no auto-refresh:", error);
+            }
+        }, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim() || !activeConvId || sending) return;
+        
+        setSending(true);
+        try {
+            await axios.post(`/api/inbox/${activeConvId}/message`, {
+                content: newMessage
+            });
+            setNewMessage('');
+            const { data } = await axios.get('/api/inbox/refresh');
+            setConversations(data);
+        } catch (error) {
+            alert('Falha ao enviar mensagem');
+        } finally {
+            setSending(false);
+        }
+    };
 
     const activeConv = conversations.find(c => c.id === activeConvId);
 
@@ -202,25 +238,33 @@ export default function InboxIndex({ conversations = [] }) {
                         </div>
 
                         {/* Composer Inferior */}
-                        <div className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800">
+                        <form onSubmit={handleSendMessage} className="p-4 bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-800 flex-shrink-0 z-10 relative">
                             <div className="flex items-end bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent transition-all">
                                 <textarea 
                                     className="w-full max-h-32 min-h-[50px] bg-transparent border-none focus:ring-0 resize-none py-3 px-4 text-sm dark:text-gray-200"
-                                    placeholder="Escreva sua mensagem... (Shift + Enter para nova linha)"
+                                    placeholder="Escreva sua mensagem... (Enter para enviar, Shift+Enter extra linha)"
+                                    value={newMessage}
+                                    onChange={(e) => setNewMessage(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage(e);
+                                        }
+                                    }}
                                 />
                             </div>
                             <div className="flex items-center justify-between mt-2 px-1">
                                 <div className="flex space-x-1">
-                                    <button className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Mic className="w-5 h-5" /></button>
-                                    <button className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Paperclip className="w-5 h-5" /></button>
-                                    <button className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Smile className="w-5 h-5" /></button>
+                                    <button type="button" className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Mic className="w-5 h-5" /></button>
+                                    <button type="button" className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Paperclip className="w-5 h-5" /></button>
+                                    <button type="button" className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Smile className="w-5 h-5" /></button>
                                 </div>
-                                <button className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm">
-                                    Enviar
+                                <button type="submit" disabled={sending} className="flex items-center px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors font-medium text-sm shadow-sm disabled:opacity-50">
+                                    {sending ? 'Enviando...' : 'Enviar'}
                                     <svg className="w-4 h-4 ml-2 transform rotate-45 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                                 </button>
                             </div>
-                        </div>
+                        </form>
                     </div>
                 ) : (
                     <div className="flex-1 flex flex-col items-center justify-center bg-[#F9FAFB] dark:bg-[#0B0F19]">

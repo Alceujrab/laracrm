@@ -30,7 +30,10 @@ Route::get('/dashboard', function () {
 Route::post('/api/webhooks/evolution', [EvolutionWebhookController::class, 'handle'])->name('api.webhooks.evolution');
 
 Route::middleware(['auth'])->group(function () {
-    Route::get('/inbox/all', [InboxController::class, 'index'])->name('inbox.all');
+    // Inbox
+    Route::get('/inbox', [InboxController::class, 'index'])->name('inbox.index');
+    Route::get('/api/inbox/refresh', [InboxController::class, 'refresh'])->name('inbox.refresh');
+    Route::post('/api/inbox/{conversation}/message', [InboxController::class, 'sendMessage'])->name('inbox.send');
 
     Route::get('/crm', [CrmController::class, 'index'])->name('crm.index');
     Route::post('/crm/deals', [CrmController::class, 'store'])->name('crm.deals.store');
