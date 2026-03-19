@@ -34,39 +34,50 @@ export default function CRMIndex({ stages = [], filters = {} }) {
     useEffect(() => {
         if (activeTab !== 'negociacoes') return;
 
-        // Initialize Sortable on every container
-        containerRefs.current.forEach((container, index) => {
-            if (container) {
-                // Destroy old instance if exists
-                if (sortablesRefs.current[index]) {
-                    sortablesRefs.current[index].destroy();
-                }
-
-                sortablesRefs.current[index] = new Sortable(container, {
-                    group: 'shared-deals',
-                    animation: 150,
-                    ghostClass: 'opacity-50',
-                    dragClass: 'shadow-2xl',
-                    onEnd: (evt) => {
-                        const itemEl = evt.item;
-                        const dealId = itemEl.dataset.dealId;
-                        const destStageId = evt.to.dataset.stageId;
-                        const sourceStageId = evt.from.dataset.stageId;
-
-                        if (sourceStageId !== destStageId && dealId && destStageId) {
-                            // Sync API - Sortable already moved the DOM element
-                            router.put(route('crm.deals.move', { deal: dealId }), {
-                                deal_stage_id: destStageId
-                            }, { preserveScroll: true, preserveState: false });
-                        }
+        // Cleanup function for first initialization and subsequent stage updates
+        const cleanup = () => {
+            if (sortablesRefs.current) {
+                sortablesRefs.current.forEach(s => {
+                    if (s && typeof s.destroy === 'function') {
+                        try { s.destroy(); } catch (e) { console.warn("Sortable cleanup error:", e); }
                     }
                 });
             }
+            sortablesRefs.current = [];
+        };
+
+        cleanup();
+
+        // Initialize Sortable on every container
+        containerRefs.current.forEach((container, index) => {
+            if (container && container.nodeType === 1) { // Ensure it's a DOM element
+                try {
+                    sortablesRefs.current[index] = new Sortable(container, {
+                        group: 'shared-deals',
+                        animation: 150,
+                        ghostClass: 'opacity-50',
+                        dragClass: 'shadow-2xl',
+                        onEnd: (evt) => {
+                            const itemEl = evt.item;
+                            const dealId = itemEl.dataset.dealId;
+                            const destStageId = evt.to.dataset.stageId;
+                            const sourceStageId = evt.from.dataset.stageId;
+
+                            if (sourceStageId !== destStageId && dealId && destStageId) {
+                                // Sync API - Sortable already moved the DOM element
+                                router.put(route('crm.deals.move', { deal: dealId }), {
+                                    deal_stage_id: destStageId
+                                }, { preserveScroll: true, preserveState: false });
+                            }
+                        }
+                    });
+                } catch (err) {
+                    console.error("Sortable init error at index " + index, err);
+                }
+            }
         });
 
-        return () => {
-            sortablesRefs.current.forEach(s => s && s.destroy());
-        };
+        return cleanup;
     }, [stages, activeTab]);
     
     // Search Debounce Logic
