@@ -36,6 +36,15 @@ class ProcessAiReplyJob implements ShouldQueue
     public function handle(EvolutionApiService $evolutionApi): void
     {
         try {
+            $this->conversation->load('channel', 'contact');
+            $channel = $this->conversation->channel;
+
+            // Bloqueio de Inteligência (Robô não está habilitado para este WhatsApp)
+            if (!$channel || !$channel->ai_enabled) {
+                Log::info("Job IA abortado: O robô inteligente está desligado para o canal {$channel->name}.");
+                return;
+            }
+
             // 1. Carregar o histórico da conversa (Últimas 10 mensagens)
             $history = $this->conversation->messages()
                             ->orderBy('created_at', 'asc')
@@ -52,13 +61,13 @@ class ProcessAiReplyJob implements ShouldQueue
                           $contextText . 
                           "\nBaseado neste histórico, crie a próxima resposta para o cliente.";
 
-            $systemInstructions = "Você é um assistente de vendas de alto nível de uma concessionária de veículos de luxo. Seu objetivo é engajar o lead, entender o que ele procura (qualificação) e conduzi-lo de forma natural a pedir uma simulação, proposta ou visita à loja. Seja humano, evite respostas engessadas ou robóticas, e NUNCA fale que você é uma IA. Suas respostas devem ser enviadas no WhatsApp, portanto use formatações como *negrito*, evite textões longos e use emojis com parcimônia.";
+            // Instrukções Dinâmicas do Canal
+            $systemInstructions = $channel->ai_prompt ?? "Você é um assistente virtual atencioso.";
 
             // 2. Chamar a IA (Laravel AI 0.3x)
-            // Utilizando o AnonymousAgent para enviar a instrução de sistema global + histórico atual
             $agent = AnonymousAgent::make($systemInstructions, [], []);
             
-            Log::info("Enviando prompt para Agentable (Laravel AI) da conversa {$this->conversation->id}...");
+            Log::info("Enviando prompt para Laravel AI do canal {$channel->name} (Conversa {$this->conversation->id})");
             
             $aiResponse = $agent->prompt($userPrompt);
             $replyText = $aiResponse->text();

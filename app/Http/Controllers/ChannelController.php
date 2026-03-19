@@ -108,4 +108,19 @@ class ChannelController extends Controller
 
         return response()->json(['message' => 'Canal removido com sucesso']);
     }
+
+    public function updateAiSettings(Request $request, Channel $channel)
+    {
+        $request->validate([
+            'ai_enabled' => 'required|boolean',
+            'ai_prompt' => 'nullable|string'
+        ]);
+
+        $channel->update([
+            'ai_enabled' => $request->ai_enabled,
+            'ai_prompt' => $request->ai_prompt
+        ]);
+
+        return response()->json(['message' => 'Configurações de IA atualizadas com sucesso', 'channel' => $channel]);
+    }
 }

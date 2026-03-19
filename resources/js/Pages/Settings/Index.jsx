@@ -5,7 +5,8 @@ import { Head, usePage } from '@inertiajs/react';
 import { 
     User, Settings as SettingsIcon, Users, Shield, UsersRound, 
     TextCursorInput, Zap, MessageSquareQuote, Bot, Share2, 
-    Plus, Search, Smartphone, Facebook, Instagram, Mail, LayoutTemplate
+    Plus, Search, Smartphone, Facebook, Instagram, Mail, LayoutTemplate,
+    BrainCircuit
 } from 'lucide-react';
 
 export default function SettingsIndex() {
@@ -36,6 +37,11 @@ export default function SettingsIndex() {
     });
     const [qrCodeData, setQrCodeData] = useState(null);
     const [loading, setLoading] = useState(false);
+
+    // AI Settings State
+    const [isAiSettingsOpen, setIsAiSettingsOpen] = useState(null);
+    const [aiForm, setAiForm] = useState({ ai_enabled: false, ai_prompt: '' });
+    const [aiSaving, setAiSaving] = useState(false);
 
     useEffect(() => {
         if (activeTab === 'canais') {
@@ -104,6 +110,29 @@ export default function SettingsIndex() {
         }
     };
 
+    const openAiSettings = (channel) => {
+        setIsAiSettingsOpen(channel);
+        setAiForm({
+            ai_enabled: channel.ai_enabled || false,
+            ai_prompt: channel.ai_prompt || "Você é um consultor premium de vendas online. Trate o cliente com gentileza e seja persuasivo."
+        });
+    };
+
+    const handleSaveAiSettings = async (e) => {
+        e.preventDefault();
+        setAiSaving(true);
+        try {
+            await axios.put(`/api/channels/${isAiSettingsOpen.id}/ai`, aiForm);
+            alert("Inteligência Artificial configurada e ativa neste canal!");
+            setIsAiSettingsOpen(null);
+            fetchChannels();
+        } catch (error) {
+            alert('Falha ao salvar as instruções: ' + error.message);
+        } finally {
+            setAiSaving(false);
+        }
+    };
+
     const renderCanais = () => (
         <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-900/50 relative">
             <div className="px-8 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex justify-between items-center z-10">
@@ -157,6 +186,9 @@ export default function SettingsIndex() {
                                             className="px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/30 rounded transition-colors"
                                         >
                                             Copiar Webhook
+                                        </button>
+                                        <button onClick={() => openAiSettings(channel)} className="px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded transition-colors flex items-center">
+                                            <BrainCircuit className="w-4 h-4 mr-1" /> Bot IA
                                         </button>
                                         {channel.status !== 'connected' && (
                                             <button onClick={() => showQrCode(channel)} className="px-3 py-1.5 text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 rounded transition-colors">
@@ -253,6 +285,56 @@ export default function SettingsIndex() {
                         <button onClick={() => { setQrCodeData(null); fetchChannels(); }} className="w-full px-4 py-2 bg-gray-900 dark:bg-gray-700 hover:bg-gray-800 dark:hover:bg-gray-600 text-white rounded-lg shadow-sm font-medium transition-colors">
                             Concluído / Fechar
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {/* Modal AI Settings */}
+            {isAiSettingsOpen && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-2xl shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden flex flex-col">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                                <BrainCircuit className="w-5 h-5 mr-2 text-emerald-500" />
+                                Inteligência Artificial: {isAiSettingsOpen.name}
+                            </h3>
+                            <button onClick={() => setIsAiSettingsOpen(null)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">&times;</button>
+                        </div>
+                        <form onSubmit={handleSaveAiSettings} className="p-6 flex-1 overflow-y-auto">
+                            <div className="space-y-6">
+                                <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl">
+                                    <div>
+                                        <h4 className="font-semibold text-gray-900 dark:text-white text-sm">Habilitar Robô Vendedor</h4>
+                                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                                            A IA só começará a conversar sozinha se não houver um corretor humano atribuído àquele cliente.
+                                        </p>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" className="sr-only peer" checked={aiForm.ai_enabled} onChange={(e) => setAiForm({ ...aiForm, ai_enabled: e.target.checked })} />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-emerald-500"></div>
+                                    </label>
+                                </div>
+
+                                <div className={aiForm.ai_enabled ? 'opacity-100 transition-opacity' : 'opacity-50 pointer-events-none transition-opacity'}>
+                                    <label className="block text-sm font-semibold text-gray-900 dark:text-white mb-2">Comando Mestre de Personalidade (Prompt)</label>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-3">Defina o comportamento do bot, regras de simulação de consórcio, tom de voz, e restrições (ex: "Nunca crie preços").</p>
+                                    <textarea 
+                                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-emerald-500 focus:border-emerald-500 block px-4 py-3 h-64 text-sm"
+                                        placeholder="Você atua no setor x... Seja amigável..."
+                                        value={aiForm.ai_prompt}
+                                        onChange={(e) => setAiForm({ ...aiForm, ai_prompt: e.target.value })}
+                                        required={aiForm.ai_enabled}
+                                    />
+                                </div>
+                            </div>
+                            <div className="flex justify-end pt-6 border-t border-gray-100 dark:border-gray-700 mt-6">
+                                <button type="button" onClick={() => setIsAiSettingsOpen(null)} className="mr-3 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-medium">Cancelar</button>
+                                <button type="submit" disabled={aiSaving} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg shadow-sm font-medium text-sm flex items-center">
+                                    {aiSaving ? 'Injetando Instruções...' : 'Salvar Personalidade'}
+                                    <BrainCircuit className="w-4 h-4 ml-2" />
+                                </button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
