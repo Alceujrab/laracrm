@@ -13,7 +13,7 @@ import CreateDealModal from '@/Components/Deal/CreateDealModal';
 import ConfiguracoesFunil from './Tabs/ConfiguracoesFunil';
 import Sortable from 'sortablejs';
 
-export default function CRMIndex({ stages = [], filters = {} }) {
+export default function CRMIndex({ stages = [], contacts = [], filters = {} }) {
     const [activeTab, setActiveTab] = useState('negociacoes');
     const [selectedDealId, setSelectedDealId] = useState(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
@@ -277,6 +277,7 @@ export default function CRMIndex({ stages = [], filters = {} }) {
                 isOpen={isCreateModalOpen} 
                 onClose={() => setIsCreateModalOpen(false)} 
                 stages={stages} 
+                contacts={contacts}
             />
         </AuthenticatedLayout>
     );

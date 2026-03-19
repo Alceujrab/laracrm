@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react';
 import { useForm } from '@inertiajs/react';
-import { X, DollarSign, Type } from 'lucide-react';
+import { X, DollarSign, Type, User } from 'lucide-react';
 
-export default function CreateDealModal({ isOpen, onClose, stages = [] }) {
+export default function CreateDealModal({ isOpen, onClose, stages = [], contacts = [] }) {
     const { data, setData, post, processing, errors, reset } = useForm({
         title: '',
         value: '',
         deal_stage_id: '',
+        contact_id: '',
         status: 'open',
     });
 
@@ -57,6 +58,25 @@ export default function CreateDealModal({ isOpen, onClose, stages = [] }) {
                     </div>
 
                     <div>
+                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contato Associado *</label>
+                        <div className="relative">
+                            <User className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
+                            <select 
+                                value={data.contact_id}
+                                onChange={e => setData('contact_id', e.target.value)}
+                                className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none dark:text-white appearance-none"
+                                required
+                            >
+                                <option value="" disabled>Selecione um Cliente</option>
+                                {contacts.map(c => (
+                                    <option key={c.id} value={c.id}>{c.name}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {errors.contact_id && <p className="text-red-500 text-xs mt-1">{errors.contact_id}</p>}
+                    </div>
+
+                    <div>
                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Valor Previsto (R$)</label>
                         <div className="relative">
                             <DollarSign className="w-5 h-5 absolute left-3 top-2.5 text-gray-400" />
@@ -98,7 +118,7 @@ export default function CreateDealModal({ isOpen, onClose, stages = [] }) {
                         </button>
                         <button 
                             type="submit"
-                            disabled={processing || !data.title || !data.deal_stage_id}
+                            disabled={processing || !data.title || !data.deal_stage_id || !data.contact_id}
                             className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-xl font-medium transition-all shadow-sm shadow-indigo-200"
                         >
                             {processing ? 'Criando...' : 'Criar Negócio'}

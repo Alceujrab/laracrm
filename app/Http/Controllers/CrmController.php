@@ -34,10 +34,12 @@ class CrmController extends Controller
         }])->get();
 
         $vehicles = Vehicle::all();
+        $contacts = \App\Models\Contact::orderBy('name')->get();
 
         return Inertia::render('CRM/Index', [
             'stages' => $stages,
             'vehicles' => $vehicles,
+            'contacts' => $contacts,
             'filters' => $request->only(['search'])
         ]);
     }
@@ -48,6 +50,7 @@ class CrmController extends Controller
             'title' => 'required|string|max:255',
             'value' => 'nullable|numeric|min:0',
             'deal_stage_id' => 'required|exists:deal_stages,id',
+            'contact_id' => 'required|exists:contacts,id',
             'status' => 'required|in:open,won,lost',
         ]);
 
