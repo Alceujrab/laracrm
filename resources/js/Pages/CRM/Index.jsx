@@ -82,9 +82,7 @@ export default function CRMIndex({ stages = [], filters = {} }) {
     
     // Search Debounce Logic
     useEffect(() => {
-        console.log("Search term updated:", searchTerm);
         const delayDebounceFn = setTimeout(() => {
-            console.log("Performing search request for:", searchTerm);
             router.get(route('crm.index'), 
                 { search: searchTerm }, 
                 { 
