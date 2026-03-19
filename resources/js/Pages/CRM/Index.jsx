@@ -196,7 +196,10 @@ export default function CRMIndex({ stages = [], filters = {} }) {
                     })}
                     
                     <div className="flex-shrink-0 w-80 flex flex-col pt-1">
-                        <button className="flex items-center justify-center w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all font-medium">
+                        <button 
+                            onClick={() => setActiveTab('configuracoes')}
+                            className="flex items-center justify-center w-full py-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-xl text-gray-500 hover:text-indigo-600 hover:border-indigo-400 hover:bg-indigo-50/50 transition-all font-medium"
+                        >
                             <Plus className="w-5 h-5 mr-2" /> Adicionar Estágio
                         </button>
                     </div>
