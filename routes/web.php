@@ -23,7 +23,7 @@ Route::get('/', function () {
 });
 
 Route::get('/dashboard', function () {
-    return redirect()->route('inbox.all');
+    return redirect()->route('inbox.index');
 })->middleware(['auth'])->name('dashboard');
 
 // Rota de Webhook da Evolution API (livre de CSRF via bootstrap/app.php)
