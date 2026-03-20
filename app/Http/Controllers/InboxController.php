@@ -142,30 +142,40 @@ class InboxController extends Controller
             $url = str_starts_with($img, 'http') ? $img : url('/storage/' . $img);
             
             try {
-                $context = stream_context_create([
-                    "ssl" => [
-                        "verify_peer" => false,
-                        "verify_peer_name" => false,
-                    ],
-                ]);
+                // S3 firewalls usually block PHP's default User-Agent. Let's masquerade.
+                $response = \Illuminate\Support\Facades\Http::withOptions([
+                    'verify' => false,
+                ])->withHeaders([
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+                    'Accept' => 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
+                ])->get($url);
+
+                if (!$response->successful()) {
+                    \Illuminate\Support\Facades\Log::error("Vehicle image fetch failed ($url): HTTP " . $response->status());
+                    continue;
+                }
                 
-                $imageContents = file_get_contents($url, false, $context);
-                if (!$imageContents) continue;
+                $imageContents = $response->body();
+                if (empty($imageContents)) continue;
                 
                 $finfo = new \finfo(FILEINFO_MIME_TYPE);
                 $mimeType = $finfo->buffer($imageContents);
                 
                 if (!str_starts_with($mimeType, 'image/')) {
+                    \Illuminate\Support\Facades\Log::warning("Vehicle image downloaded but invalid mime ($mimeType). Reverting to jpeg.");
                     $mimeType = 'image/jpeg';
                 }
                 
                 $ext = explode('/', $mimeType)[1] ?? 'jpg';
-                $fileName = "vehicle_{$i}.{$ext}";
+                $fileName = "vehicle_" . uniqid() . ".{$ext}";
                 
-                $localPath = 'messages/' . uniqid() . '.' . $ext;
+                $localPath = 'messages/' . $fileName;
                 \Illuminate\Support\Facades\Storage::disk('public')->put($localPath, $imageContents);
                 $attachmentUrl = '/storage/' . $localPath;
 
+                // Evolution (Baileys) exige Base64 cru OU Data URI dependendo da config. 
+                // A Evolution API recomenda enviar a string Base64 "raw" se der pau com data URI.
+                // Manteremos data URI para compatibilidade com o sendMessage, mas vamos tratar caso a API recuse
                 $base64Data = base64_encode($imageContents);
                 $base64 = "data:{$mimeType};base64,{$base64Data}";
                 
