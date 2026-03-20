@@ -28,6 +28,7 @@ export default function SettingsIndex() {
 
     const [channels, setChannels] = useState([]);
     const [isAddRouteOpen, setIsAddRouteOpen] = useState(false);
+    const [editingChannelId, setEditingChannelId] = useState(null);
     const [newChannelForm, setNewChannelForm] = useState({
         name: '',
         api_url: 'https://api.elitesuporte.com.br',
@@ -57,20 +58,43 @@ export default function SettingsIndex() {
         }
     };
 
+    const openEditChannel = (channel) => {
+        setEditingChannelId(channel.id);
+        setNewChannelForm({
+            name: channel.name,
+            api_url: channel.credentials?.evolution_url || 'https://api.elitesuporte.com.br',
+            api_key: channel.credentials?.api_key || '',
+            instance_name: channel.identifier || ''
+        });
+        setIsAddRouteOpen(true);
+    };
+
+    const closeChannelModal = () => {
+        setIsAddRouteOpen(false);
+        setEditingChannelId(null);
+        setNewChannelForm({ name: '', api_url: 'https://api.elitesuporte.com.br', api_key: '', instance_name: '' });
+    };
+
     const handleCreateChannel = async (e) => {
         e.preventDefault();
         setLoading(true);
         try {
-            const { data } = await axios.post('/api/channels', newChannelForm);
-            setChannels([data.channel, ...channels]);
-            setNewChannelForm({ name: '', api_url: 'https://api.elitesuporte.com.br', api_key: '', instance_name: '' });
-            setIsAddRouteOpen(false);
-            
-            // Se já veio conectado do backend (pois a sessão já estava viva na evolution)
-            if (data.channel.status === 'connected') {
-                alert(`Canal conectado com sucesso! O Webhook que você precisa caso deseje apontar manualmente é:\n\n${data.webhook_url}`);
+            if (editingChannelId) {
+                const { data } = await axios.put(`/api/channels/${editingChannelId}`, newChannelForm);
+                setChannels(channels.map(c => c.id === editingChannelId ? data.channel : c));
+                alert('Canal de Atendimento atualizado com sucesso!');
+                closeChannelModal();
             } else {
-                showQrCode(data.channel);
+                const { data } = await axios.post('/api/channels', newChannelForm);
+                setChannels([data.channel, ...channels]);
+                closeChannelModal();
+                
+                // Se já veio conectado do backend (pois a sessão já estava viva na evolution)
+                if (data.channel.status === 'connected') {
+                    alert(`Canal conectado com sucesso! O Webhook que você precisa caso deseje apontar manualmente é:\n\n${data.webhook_url}`);
+                } else {
+                    showQrCode(data.channel);
+                }
             }
         } catch (error) {
             alert('Erro ao configurar canal com servidor Evolution: ' + (error.response?.data?.error || error.message));
@@ -186,6 +210,9 @@ export default function SettingsIndex() {
                                         >
                                             Copiar Webhook
                                         </button>
+                                        <button onClick={() => openEditChannel(channel)} className="px-3 py-1.5 text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/30 rounded transition-colors flex items-center" title="Editar Credenciais">
+                                            Editar
+                                        </button>
                                         <button onClick={() => openAiSettings(channel)} className="px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 rounded transition-colors flex items-center">
                                             <BrainCircuit className="w-4 h-4 mr-1" /> Bot IA
                                         </button>
@@ -209,9 +236,12 @@ export default function SettingsIndex() {
             {isAddRouteOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
                     <div className="bg-white dark:bg-gray-800 rounded-xl w-full max-w-md shadow-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center">
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">Automação de Novo Canal</h3>
-                            <button onClick={() => setIsAddRouteOpen(false)} className="text-gray-400 hover:text-gray-600">&times;</button>
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-900/50">
+                            <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
+                                <Share2 className="w-5 h-5 mr-2 text-indigo-500"/>
+                                {editingChannelId ? 'Editar Canal' : 'Conectar Novo Canal'}
+                            </h3>
+                            <button onClick={closeChannelModal} className="text-gray-400 hover:text-gray-600">&times;</button>
                         </div>
                         <form onSubmit={handleCreateChannel} className="p-6 overflow-y-auto max-h-[70vh]">
                             <div className="space-y-4">
@@ -245,18 +275,18 @@ export default function SettingsIndex() {
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nome da Instância (Identifier)</label>
                                     <input 
-                                        type="text" required placeholder="Ex: vendedora_suely_01"
-                                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2.5"
+                                        type="text" required placeholder="Ex: vendedora_suely_01" disabled={!!editingChannelId}
+                                        className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white disabled:opacity-50 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block px-4 py-2.5"
                                         value={newChannelForm.instance_name}
                                         onChange={(e) => setNewChannelForm({...newChannelForm, instance_name: e.target.value})}
                                     />
-                                    <p className="text-xs text-gray-500 mt-2">Iremos abrir ou configurar os webhooks na instância escolhida automaticamente.</p>
+                                    {!editingChannelId && <p className="text-xs text-gray-500 mt-2">Iremos abrir ou configurar os webhooks na instância escolhida automaticamente.</p>}
                                 </div>
                             </div>
                             <div className="flex justify-end pt-6">
-                                <button type="button" onClick={() => setIsAddRouteOpen(false)} className="mr-3 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancelar</button>
-                                <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm font-medium flex items-center">
-                                    {loading ? 'Preparando...' : 'Conectar Via QR Code'}
+                                <button type="button" onClick={closeChannelModal} className="mr-3 px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-sm font-medium">Cancelar</button>
+                                <button type="submit" disabled={loading} className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg shadow-sm font-medium text-sm flex items-center">
+                                    {loading ? 'Aguarde...' : editingChannelId ? 'Salvar Configuração' : 'Conectar Via QR Code'}
                                 </button>
                             </div>
                         </form>

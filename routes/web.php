@@ -100,7 +100,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/api/crm/stages/reorder', [DealStageController::class, 'reorder'])->name('crm.stages.reorder');
 
         // Channels Management
-        Route::apiResource('/api/channels', ChannelController::class)->only(['index', 'store', 'destroy']);
+        Route::apiResource('/api/channels', ChannelController::class)->only(['index', 'store', 'update', 'destroy']);
         Route::get('/api/channels/{channel}/qrcode', [ChannelController::class, 'qrCode'])->name('channels.qrcode');
         Route::put('/api/channels/{channel}/ai', [ChannelController::class, 'updateAiSettings'])->name('channels.ai.update');
         // Automações API

@@ -242,6 +242,7 @@ export default function Organization({ users, groups, roles, flash }) {
                                             <div>
                                                 <h4 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
                                                     {g.name}
+                                                    <span className="ml-3 font-mono text-xs bg-gray-100 dark:bg-gray-700 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded border border-gray-200 dark:border-gray-600">ID: {g.id}</span>
                                                     {!g.is_active && <span className="ml-2 text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded uppercase font-bold tracking-widest">Inativo</span>}
                                                 </h4>
                                                 <p className="mt-1 text-sm text-gray-500 dark:text-gray-400 line-clamp-2">

@@ -74,6 +74,27 @@ class ChannelController extends Controller
         ], 201);
     }
 
+    public function update(Request $request, Channel $channel)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'api_url' => 'required|url',
+            'api_key' => 'required|string',
+            'instance_name' => 'required|string',
+        ]);
+
+        $channel->update([
+            'name' => $request->name,
+            'identifier' => $request->instance_name,
+            'credentials' => [
+                'evolution_url' => $request->api_url,
+                'api_key' => $request->api_key
+            ]
+        ]);
+
+        return response()->json(['message' => 'Canal atualizado', 'channel' => $channel], 200);
+    }
+
     public function qrCode(Channel $channel)
     {
         $credentials = $channel->credentials ?? [];
