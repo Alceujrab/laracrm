@@ -78,11 +78,20 @@ class EvolutionWebhookController extends Controller
         }
 
         // 2. Encontra ou cria a Conversa (Ticket) Ativa
-        $conversation = Conversation::firstOrCreate(
+        $conversation = Conversation::firstOrNew(
             ['channel_id' => $channel->id, 'contact_id' => $contact->id],
             ['status' => 'open', 'last_message_at' => now()]
         );
-        $conversation->update(['last_message_at' => now()]);
+        $isNewChat = !$conversation->exists;
+        $conversation->last_message_at = now();
+        $conversation->save();
+
+        if ($isNewChat) {
+            event(new \App\Events\TriggerAutomationEvent('new_chat', [
+                'conversation_id' => $conversation->id,
+                'channel_id' => $channel->id,
+            ]));
+        }
 
         // 3. Salva a Mensagem no CRM
         $message = Message::create([
@@ -94,6 +103,14 @@ class EvolutionWebhookController extends Controller
         ]);
 
         broadcast(new \App\Events\NewMessageReceived($message));
+
+        event(new \App\Events\TriggerAutomationEvent('new_message', [
+            'conversation_id' => $conversation->id,
+            'message_id' => $message->id,
+            'sender_type' => $senderType,
+            'content' => $messageContent,
+            'channel_id' => $channel->id,
+        ]));
 
         // 4. Inteligência Artificial: Responde se for nova mensagem DO CLIENTE e o ticket não tem humano
         if (!$fromMe && $conversation->status === 'open' && is_null($conversation->assigned_to)) {

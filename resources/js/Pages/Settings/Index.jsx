@@ -8,6 +8,7 @@ import {
     Plus, Search, Smartphone, Facebook, Instagram, Mail, LayoutTemplate,
     BrainCircuit
 } from 'lucide-react';
+import AutomationsSettings from './Automations';
 
 export default function SettingsIndex() {
     const { user } = usePage().props.auth;
@@ -415,7 +416,7 @@ export default function SettingsIndex() {
             {activeTab === 'grupos' && renderPlaceholder('Grupos de Departamentos', 'Vendas / Suporte / Onboarding para roteamento.')}
             {activeTab === 'campos' && renderPlaceholder('Campos Personalizados', 'Construtor DropDown de metadados extra no BD.')}
             {activeTab === 'frases' && renderPlaceholder('Frases Rápidas (Macros)', 'CRUD ativado p/ digitação / no chat com suporte text-rico e variáveis.')}
-            {activeTab === 'automacoes' && renderPlaceholder('Regras IF-THIS-THEN-THAT', 'Gatilhos (Tag Adicionada) => Ação (Atribuir a Usuário).')}
+            {activeTab === 'automacoes' && <AutomationsSettings />}
         </AuthenticatedLayout>
     );
 }

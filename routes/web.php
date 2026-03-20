@@ -103,6 +103,12 @@ Route::middleware(['auth'])->group(function () {
         Route::apiResource('/api/channels', ChannelController::class)->only(['index', 'store', 'destroy']);
         Route::get('/api/channels/{channel}/qrcode', [ChannelController::class, 'qrCode'])->name('channels.qrcode');
         Route::put('/api/channels/{channel}/ai', [ChannelController::class, 'updateAiSettings'])->name('channels.ai.update');
+        // Automações API
+        Route::get('/api/automations', [\App\Http\Controllers\AutomationController::class, 'index']);
+        Route::post('/api/automations', [\App\Http\Controllers\AutomationController::class, 'store']);
+        Route::put('/api/automations/{automation}', [\App\Http\Controllers\AutomationController::class, 'update']);
+        Route::delete('/api/automations/{automation}', [\App\Http\Controllers\AutomationController::class, 'destroy']);
+        Route::post('/api/automations/{automation}/toggle', [\App\Http\Controllers\AutomationController::class, 'toggle']);
     });
 });
 Route::middleware('auth')->group(function () {

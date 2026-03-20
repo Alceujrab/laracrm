@@ -97,6 +97,11 @@ class CrmController extends Controller
             'deal_stage_id' => $request->deal_stage_id
         ]);
 
+        event(new \App\Events\TriggerAutomationEvent('stage_changed', [
+            'deal_id' => $deal->id,
+            'stage_id' => $request->deal_stage_id
+        ]));
+
         return redirect()->back()->with('success', 'Negociação movida com sucesso!');
     }
 
