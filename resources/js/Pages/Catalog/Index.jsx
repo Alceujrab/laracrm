@@ -3,13 +3,26 @@ import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
 import { 
     Car, Upload, Plus, Edit, Trash2, X, FileJson, FileText,
-    Image as ImageIcon, MoreVertical, Check, AlertCircle 
+    Image as ImageIcon, MoreVertical, Check, AlertCircle, Search, Filter 
 } from 'lucide-react';
 
 export default function CatalogIndex({ vehicles = [], setting, flash }) {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
+    const [statusFilter, setStatusFilter] = useState('all');
+
+    const filteredVehicles = vehicles.filter(v => {
+        if (statusFilter !== 'all' && v.status !== statusFilter) return false;
+        if (searchTerm) {
+            const term = searchTerm.toLowerCase();
+            return (v.make || '').toLowerCase().includes(term) || 
+                   (v.model || '').toLowerCase().includes(term) || 
+                   (v.year || '').toString().includes(term);
+        }
+        return true;
+    });
 
     // Form para Configuração de Sincronização
     const { data: syncData, setData: setSyncData, post: postSync, processing: syncProcessing } = useForm({
@@ -139,6 +152,35 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                         </div>
                     </div>
 
+                    {/* Toolbar de Filtros e Busca */}
+                    <div className="mb-6 bg-white dark:bg-gray-800 p-4 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm flex flex-col md:flex-row gap-4 items-center justify-between">
+                        <div className="relative w-full md:w-96">
+                            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <Search className="h-5 w-5 text-gray-400" />
+                            </div>
+                            <input
+                                type="text"
+                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg leading-5 bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100 placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm transition-colors"
+                                placeholder="Buscar por marca, modelo ou ano..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex items-center space-x-2 w-full md:w-auto">
+                            <Filter className="w-5 h-5 text-gray-400" />
+                            <select
+                                value={statusFilter}
+                                onChange={(e) => setStatusFilter(e.target.value)}
+                                className="block w-full md:w-48 pl-3 pr-10 py-2 text-base border-gray-300 dark:border-gray-600 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-lg dark:bg-gray-700 dark:text-gray-100 transition-colors"
+                            >
+                                <option value="all">Status: Todos</option>
+                                <option value="available">Somente Disponíveis</option>
+                                <option value="reserved">Somente Reservados</option>
+                                <option value="sold">Somente Vendidos</option>
+                            </select>
+                        </div>
+                    </div>
+
                     {/* Flash Messages */}
                     {flash?.success && (
                         <div className="mb-6 bg-green-50 dark:bg-green-900/30 border-l-4 border-green-500 p-4 rounded-md flex items-center shadow-sm">
@@ -154,7 +196,7 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                     )}
 
                     {/* Grid */}
-                    {vehicles.length === 0 ? (
+                    {filteredVehicles.length === 0 ? (
                         <div className="text-center py-20 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
                             <Car className="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" />
                             <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">Nenhum Veículo no Catálogo</h3>
@@ -164,7 +206,7 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                         </div>
                     ) : (
                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                            {vehicles.map((v) => {
+                            {filteredVehicles.map((v) => {
                                 const images = v.images && typeof v.images === 'string' ? JSON.parse(v.images) : v.images;
                                 const firstImage = images && images.length > 0 ? images[0] : null;
 
