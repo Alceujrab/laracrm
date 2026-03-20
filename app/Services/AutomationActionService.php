@@ -14,10 +14,30 @@ class AutomationActionService
             switch ($actionType) {
                 case 'transfer_group':
                     if (isset($context['conversation_id']) && isset($payload['group_id'])) {
-                        $conv = Conversation::find($context['conversation_id']);
+                        $conv = Conversation::with(['contact', 'channel'])->find($context['conversation_id']);
                         if ($conv && $conv->group_id != $payload['group_id']) {
                             $conv->update(['group_id' => $payload['group_id']]);
-                            // TODO: Disparar evento WebSocket de chat atualizado para a interface
+                            
+                            $group = \App\Models\Group::find($payload['group_id']);
+                            $groupName = $group ? $group->name : 'Atendimento';
+                            
+                            $msgText = "✅ Seu atendimento foi direcionado para o setor de *{$groupName}*.\nAguarde um instante que nosso próximo consultor disponível irá lhe atender.";
+                            
+                            if ($conv->contact && $conv->channel) {
+                                app(\App\Services\EvolutionApiService::class)->sendMessage(
+                                    $conv->channel->identifier,
+                                    $conv->contact->phone,
+                                    $msgText
+                                );
+                                
+                                $message = \App\Models\Message::create([
+                                    'conversation_id' => $conv->id,
+                                    'sender_type' => 'user', 
+                                    'content' => $msgText,
+                                    'type' => 'text'
+                                ]);
+                                broadcast(new \App\Events\NewMessageReceived($message));
+                            }
                         }
                     }
                     break;

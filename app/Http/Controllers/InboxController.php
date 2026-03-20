@@ -114,10 +114,48 @@ class InboxController extends Controller
         return response()->json($message);
     }
     
-    public function assign(Request $request, Conversation $conversation)
+    public function assign(Request $request, Conversation $conversation, \App\Services\EvolutionApiService $evolutionApi)
     {
         $request->validate(['user_id' => 'nullable|exists:users,id']);
+        
+        $oldUser = $conversation->assigned_to;
         $conversation->update(['assigned_to' => $request->user_id]);
+        
+        // Se mudou pra um consultor de fato e ele não estava sendo atendido por essa mesma pessoa
+        if ($request->user_id && $oldUser != $request->user_id) {
+            $user = \App\Models\User::find($request->user_id);
+            $firstName = explode(' ', trim($user->name))[0];
+            
+            $msgText = "🤝 Olá! Meu nome é *{$firstName}* e darei continuidade ao seu atendimento a partir de agora.\n\nComo posso te ajudar hoje?";
+            
+            $contact = $conversation->contact;
+            $channel = $conversation->channel;
+            
+            if ($contact && $channel) {
+                try {
+                    $evolutionApi->sendText(
+                        $channel->credentials['evolution_url'] ?? '',
+                        $channel->credentials['api_key'] ?? '',
+                        $channel->identifier,
+                        $contact->phone,
+                        $msgText
+                    );
+                    
+                    $message = \App\Models\Message::create([
+                        'conversation_id' => $conversation->id,
+                        'sender_type' => 'user',
+                        'sender_id' => $user->id,
+                        'content' => $msgText,
+                        'type' => 'text'
+                    ]);
+                    
+                    broadcast(new \App\Events\NewMessageReceived($message))->toOthers();
+                } catch (\Exception $e) {
+                    // silent fail se der erro na Evolution
+                }
+            }
+        }
+        
         return response()->json(['success' => true]);
     }
 

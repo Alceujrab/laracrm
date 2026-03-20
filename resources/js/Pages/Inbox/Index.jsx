@@ -64,6 +64,16 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     // Auto Refresh via WebSocket (Pusher/Reverb)
     const [idleAlert, setIdleAlert] = useState(null);
 
+    const messagesEndRef = useRef(null);
+
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    useEffect(() => {
+        scrollToBottom();
+    }, [activeConv?.messages]);
+
     useEffect(() => {
         if (!window.Echo) return;
         
@@ -517,13 +527,13 @@ export default function InboxIndex({ conversations: initialConversations = [], u
 
                                 if (message.sender_type === 'contact') {
                                     return (
-                                        <div key={message.id} className="flex items-end">
+                                        <div key={message.id} className="flex items-end justify-start mb-4">
                                             <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900 flex-shrink-0 flex items-center justify-center text-xs text-indigo-700 dark:text-indigo-300 font-bold mr-2">
                                                 {getInitials(activeConv.contact?.name)}
                                             </div>
-                                            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3.5 rounded-2xl rounded-bl-none shadow-sm max-w-lg">
+                                            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-3.5 rounded-2xl rounded-bl-sm shadow-sm max-w-[85%] sm:max-w-lg">
                                                 {renderMedia()}
-                                                {message.content && <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line">{message.content}</p>}
+                                                {message.content && <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-line leading-relaxed">{message.content}</p>}
                                                 <span className="text-[10px] text-gray-400 dark:text-gray-500 mt-1 block right-0 text-right">{formatTime(message.created_at)}</span>
                                             </div>
                                         </div>
@@ -531,15 +541,19 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                 }
 
                                 return (
-                                    <div key={message.id} className="flex items-end justify-end">
-                                        <div className="bg-indigo-600 text-white p-3.5 rounded-2xl rounded-br-none shadow-sm max-w-lg text-left">
+                                    <div key={message.id} className="flex items-end justify-end mb-4">
+                                        <div className="bg-[#dcf8c6] dark:bg-[#056162] text-gray-900 dark:text-gray-100 p-3.5 rounded-2xl rounded-br-sm shadow-sm border border-[#cfebd6] dark:border-[#044c4d] max-w-[85%] sm:max-w-lg text-left relative">
                                             {renderMedia()}
-                                            {message.content && <p className="text-sm whitespace-pre-line text-indigo-50">{message.content}</p>}
-                                            <span className="text-[10px] text-indigo-200 mt-1 block right-0 text-right">{formatTime(message.created_at)}</span>
+                                            {message.content && <p className="text-sm whitespace-pre-line leading-relaxed">{message.content}</p>}
+                                            <span className="text-[10px] text-gray-500 dark:text-gray-300 mt-1 block right-0 text-right">
+                                                {formatTime(message.created_at)}
+                                                <Check className="w-3 h-3 inline-block ml-1 opacity-70" />
+                                            </span>
                                         </div>
                                     </div>
                                 );
                             })}
+                            <div ref={messagesEndRef} />
                         </div>
 
                         {/* Modais Inline da Toolbar */}
