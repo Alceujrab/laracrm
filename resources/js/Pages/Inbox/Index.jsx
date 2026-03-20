@@ -609,29 +609,51 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                         )}
 
                         {isCatalogOpen && (
-                            <div className="absolute bottom-[90px] left-20 z-50 w-[400px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in slide-in-from-bottom-2 fade-in">
-                                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/50 border-b border-indigo-100 dark:border-indigo-800 font-semibold text-sm flex justify-between text-indigo-800 dark:text-indigo-200">
-                                    <div className="flex items-center"><Car className="w-4 h-4 mr-2"/> Catálogo de Veículos</div>
-                                    <button onClick={() => setIsCatalogOpen(false)} className="text-indigo-400"><X className="w-4 h-4"/></button>
+                            <div className="absolute bottom-[90px] left-20 z-50 w-[400px] sm:w-[500px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in slide-in-from-bottom-2 fade-in">
+                                <div className="p-3 bg-indigo-50 dark:bg-indigo-900/50 border-b border-indigo-100 dark:border-indigo-800 font-semibold text-sm flex flex-col gap-2 text-indigo-800 dark:text-indigo-200">
+                                    <div className="flex justify-between items-center">
+                                        <div className="flex items-center"><Car className="w-4 h-4 mr-2"/> Inserir Veículo no Chat</div>
+                                        <button onClick={() => setIsCatalogOpen(false)} className="text-indigo-400 hover:text-indigo-600"><X className="w-4 h-4"/></button>
+                                    </div>
+                                    <div className="relative w-full">
+                                        <Search className="w-4 h-4 absolute left-2.5 top-2.5 text-indigo-400" />
+                                        <input 
+                                            autoFocus
+                                            type="text" 
+                                            placeholder="Buscar modelo ou marca..." 
+                                            value={vehicleSearch} 
+                                            onChange={e => setVehicleSearch(e.target.value)} 
+                                            className="w-full text-xs pl-8 pr-3 py-2 border-indigo-200 dark:border-indigo-800 rounded-md bg-white dark:bg-gray-800 dark:text-gray-100 focus:ring-1 focus:ring-indigo-500" 
+                                        />
+                                    </div>
                                 </div>
                                 <div className="max-h-80 overflow-y-auto p-3 grid grid-cols-2 gap-3">
-                                    {vehicles.map(v => (
-                                        <div key={v.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden group hover:border-indigo-500 cursor-pointer transition-colors bg-white dark:bg-gray-900 flex flex-col"
-                                             onClick={() => sendVehicleMedia(v)}
-                                        >
-                                            {/* Preview Image mock */}
-                                            <div className="h-28 bg-gray-100 dark:bg-gray-800 w-full flex items-center justify-center relative overflow-hidden">
-                                                {v.images && v.images.length > 0 ? (
-                                                    <img src={'/storage/'+v.images[0]} className="object-cover w-full h-full" alt="carro" />
-                                                ) : <Car className="w-8 h-8 text-gray-300 dark:text-gray-700" />}
+                                    {vehicles.filter(v => vehicleSearch ? (v.make+' '+v.model).toLowerCase().includes(vehicleSearch.toLowerCase()) : true).map(v => {
+                                        const parsedImages = v.images && typeof v.images === 'string' ? JSON.parse(v.images) : (v.images || []);
+                                        const firstImage = parsedImages.length > 0 ? parsedImages[0] : null;
+                                        
+                                        return (
+                                            <div key={v.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden group hover:border-indigo-500 cursor-pointer transition-colors bg-white dark:bg-gray-900 flex flex-col"
+                                                 onClick={() => sendVehicleMedia(v)}
+                                            >
+                                                <div className="h-28 bg-gray-100 dark:bg-gray-800 w-full flex items-center justify-center relative overflow-hidden">
+                                                    {firstImage ? (
+                                                        <img src={firstImage.startsWith('http') ? firstImage : ('/storage/' + firstImage)} className="object-cover w-full h-full transform group-hover:scale-105 transition-transform" alt="carro" />
+                                                    ) : <Car className="w-8 h-8 text-gray-300 dark:text-gray-600" />}
+                                                </div>
+                                                <div className="p-2 flex-1 flex flex-col justify-between">
+                                                    <div>
+                                                        <p className="text-xs font-bold text-gray-800 dark:text-gray-200 line-clamp-1" title={`${v.make} ${v.model}`}>{v.make} <span className="font-normal">{v.model}</span></p>
+                                                        <p className="text-[10px] text-gray-500 mt-0.5">{v.year}</p>
+                                                    </div>
+                                                    <p className="text-sm font-black text-indigo-600 dark:text-indigo-400 mt-1">R$ {v.price ? parseFloat(v.price).toLocaleString('pt-BR') : '--'}</p>
+                                                </div>
                                             </div>
-                                            <div className="p-2 bg-white dark:bg-gray-800">
-                                                <p className="text-xs font-bold text-gray-800 dark:text-gray-200 truncate">{v.make} {v.model}</p>
-                                                <p className="text-[10px] text-gray-500">{v.year}</p>
-                                                <p className="text-xs font-bold text-green-600 dark:text-green-400 mt-1">R$ {parseFloat(v.price).toLocaleString('pt-BR')}</p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
+                                    {vehicles.filter(v => vehicleSearch ? (v.make+' '+v.model).toLowerCase().includes(vehicleSearch.toLowerCase()) : true).length === 0 && (
+                                        <div className="col-span-2 text-center text-xs text-gray-400 py-6">Nenhum veículo encontrado.</div>
+                                    )}
                                 </div>
                             </div>
                         )}

@@ -212,7 +212,7 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                                 const firstImage = images && images.length > 0 ? images[0] : null;
 
                                 return (
-                                    <div key={v.id} className="group flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 relative">
+                                    <div key={v.id} onClick={() => setViewingVehicle(v)} className="cursor-pointer group flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 relative">
                                         
                                         {/* Status Badge */}
                                         <div className="absolute top-3 left-3 z-10">
@@ -225,9 +225,7 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                                         </div>
 
                                         {/* Clickable Area for Viewing Details */}
-                                        <div className="absolute inset-0 z-0 cursor-pointer" onClick={() => setViewingVehicle(v)}></div>
-
-                                        {/* Hover Actions */}
+                                        {/* Status Badge */}
                                         <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
                                             <button onClick={(e) => { e.stopPropagation(); openEditModal(v); }} className="p-1.5 bg-white/90 dark:bg-gray-800/90 hover:bg-indigo-50 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-md backdrop-blur-sm shadow-sm transition-colors relative z-20">
                                                 <Edit className="w-4 h-4" />
