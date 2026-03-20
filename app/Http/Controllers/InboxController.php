@@ -109,6 +109,8 @@ class InboxController extends Controller
 
         $conversation->update(['last_message_at' => now()]);
 
+        broadcast(new \App\Events\NewMessageReceived($message))->toOthers();
+
         return response()->json($message);
     }
     

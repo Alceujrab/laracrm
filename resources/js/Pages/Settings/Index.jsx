@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, usePage } from '@inertiajs/react';
+import { Head, usePage, router } from '@inertiajs/react';
 import { 
     User, Settings as SettingsIcon, Users, Shield, UsersRound, 
     TextCursorInput, Zap, MessageSquareQuote, Bot, Share2, 
@@ -399,7 +399,10 @@ export default function SettingsIndex() {
     return (
         <AuthenticatedLayout
             activeModule="settings"
-            sidebarMenuItems={settingsMenu.map(item => ({...item, onClick: () => setActiveTab(item.id)}))}
+            sidebarMenuItems={settingsMenu.map(item => ({
+                ...item, 
+                onClick: item.onClick ? item.onClick : () => setActiveTab(item.id)
+            }))}
         >
             <Head title={`Configurações - ${activeTab}`} />
 

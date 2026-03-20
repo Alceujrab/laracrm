@@ -93,6 +93,8 @@ class EvolutionWebhookController extends Controller
             'type' => 'text'
         ]);
 
+        broadcast(new \App\Events\NewMessageReceived($message));
+
         // 4. Inteligência Artificial: Responde se for nova mensagem DO CLIENTE e o ticket não tem humano
         if (!$fromMe && $conversation->status === 'open' && is_null($conversation->assigned_to)) {
             Log::info("Despachando IA para responder a conversa {$conversation->id}");
