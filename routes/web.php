@@ -74,6 +74,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/catalog/{vehicle}', [VehicleController::class, 'update'])->name('catalog.update');
     Route::delete('/catalog/{vehicle}', [VehicleController::class, 'destroy'])->name('catalog.destroy');
     Route::post('/catalog/import', [VehicleController::class, 'import'])->name('catalog.import');
+    Route::post('/catalog/settings', [VehicleController::class, 'updateSettings'])->name('catalog.settings.update');
+    Route::post('/catalog/sync/force', [VehicleController::class, 'forceSync'])->name('catalog.sync.force');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 

@@ -1,4 +1,3 @@
-```javascript
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
@@ -7,15 +6,17 @@ import {
     Image as ImageIcon, MoreVertical, Check, AlertCircle 
 } from 'lucide-react';
 
-export default function CatalogIndex({ vehicles = [], flash }) {
+export default function CatalogIndex({ vehicles = [], setting, flash }) {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState(null);
 
-    // Form para Importação
-    const { data: importData, setData: setImportData, post: postImport, processing: importProcessing, errors: importErrors, reset: resetImport } = useForm({
-        file: null,
+    // Form para Configuração de Sincronização
+    const { data: syncData, setData: setSyncData, post: postSync, processing: syncProcessing } = useForm({
+        xml_feed_url: setting?.xml_feed_url || '',
+        auto_sync: setting?.auto_sync || false,
     });
+    const [forceProcessing, setForceProcessing] = useState(false);
 
     // Form para CRUD Manual
     const { data: vData, setData: setVData, post: postVehicle, put: putVehicle, processing: vProcessing, errors: vErrors, reset: resetVData } = useForm({
@@ -59,13 +60,22 @@ export default function CatalogIndex({ vehicles = [], flash }) {
         }
     };
 
-    const submitImport = (e) => {
+    const submitSettings = (e) => {
         e.preventDefault();
-        postImport(route('catalog.import'), {
+        postSync(route('catalog.settings.update'), {
+            preserveScroll: true,
             onSuccess: () => {
                 setIsImportModalOpen(false);
-                resetImport();
             }
+        });
+    };
+
+    const forceSync = () => {
+        setForceProcessing(true);
+        router.post(route('catalog.sync.force'), {}, {
+            preserveScroll: true,
+            onFinish: () => setForceProcessing(false),
+            onSuccess: () => setIsImportModalOpen(false)
         });
     };
 
@@ -117,7 +127,7 @@ export default function CatalogIndex({ vehicles = [], flash }) {
                                 className="inline-flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-md font-semibold text-xs text-gray-700 dark:text-gray-300 uppercase tracking-widest shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none transition ease-in-out duration-150"
                             >
                                 <Upload className="w-4 h-4 mr-2" />
-                                Importar XML/Json
+                                Configurar Sync
                             </button>
                             <button 
                                 onClick={openCreateModal}
@@ -149,7 +159,7 @@ export default function CatalogIndex({ vehicles = [], flash }) {
                             <Car className="mx-auto h-16 w-16 text-gray-300 dark:text-gray-600" />
                             <h3 className="mt-4 text-lg font-medium text-gray-900 dark:text-gray-100">Nenhum Veículo no Catálogo</h3>
                             <p className="mt-2 text-sm text-gray-500 dark:text-gray-400 max-w-sm mx-auto">
-                                Seu estoque está vazio. Importe a listagem base via XML ou JSON, ou cadastre o primeiro lote de forma manual.
+                                Seu estoque está vazio. Configure a Sincronização Inteligente via Link XML para puxar todos automaticamente, ou adicione manualmente.
                             </p>
                         </div>
                     ) : (
@@ -228,52 +238,70 @@ export default function CatalogIndex({ vehicles = [], flash }) {
                 </div>
             </div>
 
-            {/* Modal Importação Massiva */}
+            {/* Modal de Sincronização */}
             {isImportModalOpen && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/60 backdrop-blur-sm">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
                         <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white flex items-center">
                                 <FileJson className="w-5 h-5 mr-2 text-indigo-600 dark:text-indigo-400" />
-                                Importar Lote de Veículos
+                                Inteligência de Sincronização
                             </h3>
                             <button onClick={() => setIsImportModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
                                 <X className="w-5 h-5" />
                             </button>
                         </div>
-                        <form onSubmit={submitImport}>
-                            <div className="p-6">
+                        <div className="p-6">
+                            <form onSubmit={submitSettings}>
                                 <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
-                                    Faça o upload de um arquivo estruturado JSON ou XML contendo sua frota. O sistema lerá os Nodes com marca, modelo, ano e os publicará no catálogo em segundos.
+                                    Configure o seu painel para importar e atualizar o estoque automaticamente a partir de um link da RevendaMais ou similar.
                                 </p>
 
-                                <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center bg-gray-50 dark:bg-gray-900 hover:bg-gray-100 hover:border-indigo-400 dark:hover:bg-gray-800/80 transition-all cursor-pointer relative">
+                                <div className="mb-5">
+                                    <label className="block text-xs font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1">URL do Feed (XML/JSON)</label>
                                     <input 
-                                        type="file" 
-                                        accept=".json,.xml"
-                                        onChange={e => setImportData('file', e.target.files[0])}
-                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
-                                        required
+                                        type="url" 
+                                        value={syncData.xml_feed_url} 
+                                        onChange={e => setSyncData('xml_feed_url', e.target.value)} 
+                                        className="w-full text-sm rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white focus:ring-indigo-500 focus:border-indigo-500" 
+                                        placeholder="https://app.revendamais.com.br/..."
                                     />
-                                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                                    {importData.file ? (
-                                        <p className="font-medium text-indigo-600 dark:text-indigo-400">{importData.file.name}</p>
-                                    ) : (
-                                        <p className="font-medium text-gray-700 dark:text-gray-300">
-                                            Arraste e solte o arquivo aqui<br/>
-                                            <span className="text-xs text-gray-400 font-normal mt-1 block">Suporta apenas .JSON e .XML</span>
-                                        </p>
-                                    )}
                                 </div>
-                                {importErrors.file && <p className="text-red-500 text-xs mt-2 font-medium">{importErrors.file}</p>}
-                            </div>
-                            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-100 dark:border-gray-700 flex justify-end space-x-3">
-                                <button type="button" onClick={() => setIsImportModalOpen(false)} className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors">Cancelar</button>
-                                <button type="submit" disabled={importProcessing} className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 transition-colors shadow-sm flex items-center">
-                                    {importProcessing ? 'Processando Lote...' : 'Iniciar Importação'}
+                                
+                                <div className="mb-6 flex items-center justify-between bg-gray-50 dark:bg-gray-900 p-4 rounded-xl border border-gray-200 dark:border-gray-700">
+                                    <div className="flex flex-col">
+                                        <span className="text-sm font-bold text-gray-900 dark:text-white">Auto-Sync (15 Minutos)</span>
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">Varredura inteligente no background.</span>
+                                    </div>
+                                    <label className="relative inline-flex items-center cursor-pointer">
+                                        <input type="checkbox" checked={syncData.auto_sync} onChange={e => setSyncData('auto_sync', e.target.checked)} className="sr-only peer" />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
+                                    </label>
+                                </div>
+                                
+                                <div className="flex justify-end space-x-3 mt-4">
+                                    <button type="submit" disabled={syncProcessing} className="px-6 py-2 text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg disabled:opacity-50 transition-colors shadow-sm">
+                                        {syncProcessing ? 'Salvando...' : 'Salvar Configuração'}
+                                    </button>
+                                </div>
+                            </form>
+                            
+                            <hr className="my-6 border-gray-200 dark:border-gray-700" />
+                            
+                            <div className="flex flex-col">
+                                <p className="text-xs text-center text-gray-500 mb-3">
+                                    Última sincronização: {setting?.last_sync_at ? new Date(setting.last_sync_at).toLocaleString('pt-BR') : 'Nunca realizada'}
+                                </p>
+                                <button onClick={forceSync} disabled={forceProcessing} className="w-full py-3 px-4 flex items-center justify-center text-sm font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg hover:bg-indigo-100 disabled:opacity-50 transition-all dark:bg-indigo-900/30 dark:border-indigo-800 dark:text-indigo-400 dark:hover:bg-indigo-900/50">
+                                    {forceProcessing ? (
+                                        <span className="animate-pulse">Varrendo Arquivo XML...</span>
+                                    ) : (
+                                        <>Disparar Sincronização Agora</>
+                                    )}
                                 </button>
                             </div>
-                        </form>
+
+                        </div>
                     </div>
                 </div>
             )}

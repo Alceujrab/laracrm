@@ -12,8 +12,10 @@ class VehicleController extends Controller
     public function index()
     {
         $vehicles = Vehicle::orderBy('created_at', 'desc')->get();
+        $setting = \App\Models\CatalogSetting::first();
         return Inertia::render('Catalog/Index', [
-            'vehicles' => $vehicles
+            'vehicles' => $vehicles,
+            'setting' => $setting
         ]);
     }
 
@@ -180,6 +182,28 @@ class VehicleController extends Controller
 
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Erro interno no servidor ao processar arquivo: ' . $e->getMessage());
+        }
+    }
+
+    public function updateSettings(Request $request) {
+        $data = $request->validate([
+            'xml_feed_url' => 'nullable|url',
+            'auto_sync' => 'boolean'
+        ]);
+        
+        $setting = \App\Models\CatalogSetting::first() ?? new \App\Models\CatalogSetting();
+        $setting->fill($data);
+        $setting->save();
+        
+        return redirect()->back()->with('success', 'Configurações de Sincronização Automática salvas com sucesso.');
+    }
+
+    public function forceSync() {
+        try {
+            \App\Jobs\SyncCatalogJob::dispatchSync();
+            return redirect()->back()->with('success', 'Varredura e Sincronização do XML concluída.');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao forçar sincronização: ' . $e->getMessage());
         }
     }
 }
