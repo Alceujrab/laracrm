@@ -11,6 +11,7 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState(null);
     const [viewingVehicle, setViewingVehicle] = useState(null);
+    const [selectedImage, setSelectedImage] = useState(0);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
@@ -212,7 +213,7 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                                 const firstImage = images && images.length > 0 ? images[0] : null;
 
                                 return (
-                                    <div key={v.id} onClick={() => setViewingVehicle(v)} className="cursor-pointer group flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 relative">
+                                    <div key={v.id} onClick={() => { setViewingVehicle(v); setSelectedImage(0); }} className="cursor-pointer group flex flex-col bg-white dark:bg-gray-800 rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-all duration-200 relative">
                                         
                                         {/* Status Badge */}
                                         <div className="absolute top-3 left-3 z-10">
@@ -379,18 +380,24 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                                         <>
                                             <div className="w-full h-64 sm:h-96 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
                                                 <img 
-                                                    src={vImgs[0].startsWith('http') ? vImgs[0] : `/storage/${vImgs[0]}`} 
+                                                    src={vImgs[selectedImage]?.startsWith('http') ? vImgs[selectedImage] : `/storage/${vImgs[selectedImage]}`} 
                                                     alt="Foto Principal" 
                                                     className="w-full h-full object-cover"
                                                 />
                                             </div>
                                             <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
-                                                {vImgs.slice(1).map((img, i) => (
-                                                    <div key={i} className="aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity cursor-pointer">
+                                                {vImgs.map((img, i) => (
+                                                    <div 
+                                                        key={i} 
+                                                        onClick={() => setSelectedImage(i)}
+                                                        className={`aspect-square rounded-lg overflow-hidden border-2 hover:opacity-80 transition-opacity cursor-pointer ${
+                                                            selectedImage === i ? 'border-indigo-500' : 'border-gray-200 dark:border-gray-700 opacity-60'
+                                                        }`}
+                                                    >
                                                         <img 
                                                             src={img.startsWith('http') ? img : `/storage/${img}`} 
                                                             className="w-full h-full object-cover" 
-                                                            alt={`Foto ${i+2}`} 
+                                                            alt={`Foto ${i+1}`} 
                                                         />
                                                     </div>
                                                 ))}

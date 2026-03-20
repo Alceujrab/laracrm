@@ -53,6 +53,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     const [isNewConvOpen, setIsNewConvOpen] = useState(false);
     const [isCatalogOpen, setIsCatalogOpen] = useState(false);
     const [isMacroOpen, setIsMacroOpen] = useState(false);
+    const [vehicleSearch, setVehicleSearch] = useState('');
 
     // Recording State
     const [isRecording, setIsRecording] = useState(false);
