@@ -35,9 +35,20 @@ class ProcessAutomations implements ShouldQueue
                 // Verifica TODAS as conditions exigidas pela regra
                 // Se o JSON for {"tag_id": 5}, o array $event->context OBRIGATORIAMENTE deve ter ['tag_id' => 5] ou a tag atrelada.
                 foreach ($conditions as $key => $val) {
-                    if (!isset($event->context[$key]) || (string)$event->context[$key] !== (string)$val) {
+                    if (!isset($event->context[$key])) {
                         $match = false;
                         break;
+                    }
+                    if ($key === 'content') {
+                        if (trim(strtolower($event->context[$key])) !== trim(strtolower($val))) {
+                            $match = false;
+                            break;
+                        }
+                    } else {
+                        if ((string)$event->context[$key] !== (string)$val) {
+                            $match = false;
+                            break;
+                        }
                     }
                 }
 

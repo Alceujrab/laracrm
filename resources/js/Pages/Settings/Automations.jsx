@@ -217,8 +217,21 @@ export default function AutomationsSettings() {
                                                 type="number" required placeholder="ID do Stage"
                                                 className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg px-4 py-2.5"
                                                 value={form.trigger_conditions.stage_id || ''} 
-                                                onChange={(e) => setForm({...form, trigger_conditions: { stage_id: e.target.value }})}
+                                                onChange={(e) => setForm({...form, trigger_conditions: { ...form.trigger_conditions, stage_id: e.target.value }})}
                                             />
+                                        </div>
+                                    )}
+
+                                    {form.trigger_type === 'new_message' && (
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">E o texto da mensagem for EXATAMENTE:</label>
+                                            <input 
+                                                type="text" required placeholder="Ex: 1"
+                                                className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg px-4 py-2.5"
+                                                value={form.trigger_conditions.content || ''} 
+                                                onChange={(e) => setForm({...form, trigger_conditions: { ...form.trigger_conditions, content: e.target.value, sender_type: 'contact' }})}
+                                            />
+                                            <p className="text-xs text-gray-500 mt-1">Isso só acionará se o cliente digitar exatamente esta palavra/número.</p>
                                         </div>
                                     )}
                                 </div>
