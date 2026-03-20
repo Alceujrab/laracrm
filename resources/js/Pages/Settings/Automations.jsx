@@ -240,6 +240,7 @@ export default function AutomationsSettings() {
                                             <option value="">Selecione a Ação</option>
                                             <option value="transfer_group">Transferir para Fila/Setor</option>
                                             <option value="assign_user">Atribuir a um Usuário</option>
+                                            <option value="send_message">Enviar Mensagem Automática</option>
                                         </select>
                                     </div>
 
