@@ -1,8 +1,9 @@
+```javascript
 import React, { useState } from 'react';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, useForm, router } from '@inertiajs/react';
 import { 
-    Car, Upload, Plus, Edit, Trash2, X, FileJson, 
+    Car, Upload, Plus, Edit, Trash2, X, FileJson, FileText,
     Image as ImageIcon, MoreVertical, Check, AlertCircle 
 } from 'lucide-react';
 
