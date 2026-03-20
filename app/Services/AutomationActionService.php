@@ -21,7 +21,7 @@ class AutomationActionService
                             $group = \App\Models\Group::find($payload['group_id']);
                             $groupName = $group ? $group->name : 'Atendimento';
                             
-                            $msgText = "✅ Seu atendimento foi direcionado para o setor de *{$groupName}*.\nAguarde um instante que nosso próximo consultor disponível irá lhe atender.";
+                            $msgText = "✅ Seu atendimento foi direcionado para o setor de *{$groupName}*.\n\nEstou chamando um vendedor livre para lhe atender o mais rápido possível. Enquanto isso, como gostaria de ser chamado e como podemos lhe ajudar?";
                             
                             if ($conv->contact && $conv->channel) {
                                 app(\App\Services\EvolutionApiService::class)->sendMessage(

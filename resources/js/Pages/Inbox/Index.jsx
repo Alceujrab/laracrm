@@ -603,7 +603,18 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                         )}
 
                         {/* Composer Inferior */}
-                        {isRecording ? (
+                        {(!activeConv.assigned_to) ? (
+                            <div className="p-6 border-t z-10 relative bg-white dark:bg-gray-900 border-t-2 border-indigo-100 flex items-center justify-between shadow-inner">
+                                <div className="text-gray-600 dark:text-gray-300 font-medium">Esta conversa aguarda um atendente.</div>
+                                <button 
+                                    onClick={() => handleAssign(auth.user.id)}
+                                    className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg shadow-md transition-all flex items-center animate-pulse hover:animate-none"
+                                >
+                                    <Check className="w-5 h-5 mr-2"/>
+                                    Aceitar e Iniciar Atendimento
+                                </button>
+                            </div>
+                        ) : isRecording ? (
                             <div className="p-6 border-t z-10 relative bg-white dark:bg-gray-900 flex items-center justify-between border-t-red-500 border-t-2">
                                 <div className="flex items-center text-red-500 animate-pulse">
                                     <Mic className="w-6 h-6 mr-3" />
