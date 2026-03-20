@@ -137,20 +137,10 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                 fd.append('type', 'text');
                 await axios.post(`/api/inbox/${activeConvId}/message`, fd);
             } else {
-                const maxPhotos = Math.min(images.length, 5);
-                for (let i = 0; i < maxPhotos; i++) {
-                    const res = await fetch(images[i].startsWith('http') ? images[i] : `/storage/${images[i]}`);
-                    const blob = await res.blob();
-                    
-                    const fd = new FormData();
-                    if (i === 0) fd.append('content', textContent); // Legenda vai apenas na 1ª foto
-                    fd.append('type', 'image');
-                    
-                    let ext = blob.type.split('/')[1] || 'jpg';
-                    fd.append('file', new File([blob], `vehicle_photo_${i}.${ext}`, {type: blob.type}));
-
-                    await axios.post(`/api/inbox/${activeConvId}/message`, fd, { headers: { 'Content-Type': 'multipart/form-data' }});
-                }
+                await axios.post(`/api/inbox/${activeConvId}/vehicle-media`, {
+                    caption: textContent,
+                    images: images
+                });
             }
             
             const { data } = await axios.get('/api/inbox/refresh');

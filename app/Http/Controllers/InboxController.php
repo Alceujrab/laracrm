@@ -114,6 +114,88 @@ class InboxController extends Controller
         return response()->json($message);
     }
     
+    public function sendVehicleMedia(Request $request, Conversation $conversation, \App\Services\EvolutionApiService $evolutionApi)
+    {
+        $request->validate([
+            'caption' => 'nullable|string',
+            'images'  => 'required|array'
+        ]);
+
+        $channel = $conversation->channel;
+        $contact = $conversation->contact;
+
+        if (!$channel || !$contact) {
+            return response()->json(['error' => 'Conversa sem canal ou contato válido'], 400);
+        }
+
+        $credentials = $channel->credentials ?? [];
+        $apiUrl = $credentials['evolution_url'] ?? null;
+        $apiKey = $credentials['api_key'] ?? null;
+        $instanceName = $channel->identifier;
+
+        $images = $request->images;
+        $caption = $request->caption ?? '';
+        $maxPhotos = min(count($images), 5);
+
+        for ($i = 0; $i < $maxPhotos; $i++) {
+            $img = $images[$i];
+            $url = str_starts_with($img, 'http') ? $img : url('/storage/' . $img);
+            
+            try {
+                $context = stream_context_create([
+                    "ssl" => [
+                        "verify_peer" => false,
+                        "verify_peer_name" => false,
+                    ],
+                ]);
+                
+                $imageContents = file_get_contents($url, false, $context);
+                if (!$imageContents) continue;
+                
+                $finfo = new \finfo(FILEINFO_MIME_TYPE);
+                $mimeType = $finfo->buffer($imageContents);
+                
+                if (!str_starts_with($mimeType, 'image/')) {
+                    $mimeType = 'image/jpeg';
+                }
+                
+                $ext = explode('/', $mimeType)[1] ?? 'jpg';
+                $fileName = "vehicle_{$i}.{$ext}";
+                
+                $localPath = 'messages/' . uniqid() . '.' . $ext;
+                \Illuminate\Support\Facades\Storage::disk('public')->put($localPath, $imageContents);
+                $attachmentUrl = '/storage/' . $localPath;
+
+                $base64Data = base64_encode($imageContents);
+                $base64 = "data:{$mimeType};base64,{$base64Data}";
+                
+                $curCaption = ($i === 0) ? $caption : '';
+
+                if ($apiUrl && $apiKey && $instanceName) {
+                    $evolutionApi->sendMedia($apiUrl, $apiKey, $instanceName, $contact->phone, $base64, 'image', $fileName, $curCaption);
+                }
+
+                $message = \App\Models\Message::create([
+                    'conversation_id' => $conversation->id,
+                    'sender_type' => 'user',
+                    'sender_id' => auth()->id(),
+                    'content' => $curCaption,
+                    'type' => 'image',
+                    'attachment_url' => $attachmentUrl
+                ]);
+                
+                broadcast(new \App\Events\NewMessageReceived($message))->toOthers();
+
+            } catch (\Exception $e) {
+                \Illuminate\Support\Facades\Log::error("Vehicle proxy transfer failed: " . $e->getMessage());
+            }
+        }
+
+        $conversation->update(['last_message_at' => now()]);
+
+        return response()->json(['success' => true]);
+    }
+    
     public function assign(Request $request, Conversation $conversation, \App\Services\EvolutionApiService $evolutionApi)
     {
         $request->validate(['user_id' => 'nullable|exists:users,id']);
