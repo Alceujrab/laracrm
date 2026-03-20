@@ -15,16 +15,14 @@ export default function SettingsIndex() {
 
     // Sidebar Items
     const settingsMenu = [
-        { label: 'Perfil', icon: User, active: activeTab === 'perfil', id: 'perfil' },
+        { label: 'Perfil Mestre', icon: User, active: activeTab === 'perfil', id: 'perfil' },
         { label: 'Geral', icon: SettingsIcon, active: activeTab === 'geral', id: 'geral' },
-        { label: 'Membros', icon: Users, active: activeTab === 'membros', id: 'membros' },
-        { label: 'Permissões', icon: Shield, active: activeTab === 'permissoes', id: 'permissoes' },
-        { label: 'Grupos', icon: UsersRound, active: activeTab === 'grupos', id: 'grupos' },
+        { label: 'Organização (Acessos)', icon: Shield, active: false, id: 'org', onClick: () => router.visit('/settings/organization') },
+        { label: 'Canais', icon: Share2, active: activeTab === 'canais', id: 'canais' },
         { label: 'Campos Customizados', icon: TextCursorInput, active: activeTab === 'campos', id: 'campos' },
         { label: 'Frases Rápidas', icon: MessageSquareQuote, active: activeTab === 'frases', id: 'frases' },
         { label: 'Automações', icon: Zap, active: activeTab === 'automacoes', id: 'automacoes' },
         { label: 'Bot / Fluxos', icon: Bot, active: activeTab === 'bots', id: 'bots' },
-        { label: 'Canais', icon: Share2, active: activeTab === 'canais', id: 'canais' },
     ];
 
     const [channels, setChannels] = useState([]);

@@ -79,20 +79,31 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
-    Route::get('/settings', function () {
-        return Inertia::render('Settings/Index');
-    })->name('settings.index');
+    // --- ROTAS ADMINISTRATIVAS (Somente Admin) ---
+    Route::middleware(['role:admin'])->group(function () {
+        Route::get('/settings', function () {
+            return Inertia::render('Settings/Index');
+        })->name('settings.index');
 
-    // CRM Stages Management
-    Route::post('/api/crm/stages', [DealStageController::class, 'store'])->name('crm.stages.store');
-    Route::put('/api/crm/stages/{stage}', [DealStageController::class, 'update'])->name('crm.stages.update');
-    Route::delete('/api/crm/stages/{stage}', [DealStageController::class, 'destroy'])->name('crm.stages.destroy');
-    Route::put('/api/crm/stages/reorder', [DealStageController::class, 'reorder'])->name('crm.stages.reorder');
+        // Organização (Membros, Cargos e Setores)
+        Route::get('/settings/organization', [\App\Http\Controllers\OrganizationController::class, 'index'])->name('settings.organization');
+        Route::post('/settings/members', [\App\Http\Controllers\OrganizationController::class, 'storeMember'])->name('settings.members.store');
+        Route::put('/settings/members/{user}', [\App\Http\Controllers\OrganizationController::class, 'updateMember'])->name('settings.members.update');
+        Route::post('/settings/groups', [\App\Http\Controllers\OrganizationController::class, 'storeGroup'])->name('settings.groups.store');
+        Route::put('/settings/groups/{group}', [\App\Http\Controllers\OrganizationController::class, 'updateGroup'])->name('settings.groups.update');
+        Route::delete('/settings/groups/{group}', [\App\Http\Controllers\OrganizationController::class, 'destroyGroup'])->name('settings.groups.destroy');
 
-    // Channels Management
-    Route::apiResource('/api/channels', ChannelController::class)->only(['index', 'store', 'destroy']);
-    Route::get('/api/channels/{channel}/qrcode', [ChannelController::class, 'qrCode'])->name('channels.qrcode');
-    Route::put('/api/channels/{channel}/ai', [ChannelController::class, 'updateAiSettings'])->name('channels.ai.update');
+        // CRM Stages Management
+        Route::post('/api/crm/stages', [DealStageController::class, 'store'])->name('crm.stages.store');
+        Route::put('/api/crm/stages/{stage}', [DealStageController::class, 'update'])->name('crm.stages.update');
+        Route::delete('/api/crm/stages/{stage}', [DealStageController::class, 'destroy'])->name('crm.stages.destroy');
+        Route::put('/api/crm/stages/reorder', [DealStageController::class, 'reorder'])->name('crm.stages.reorder');
+
+        // Channels Management
+        Route::apiResource('/api/channels', ChannelController::class)->only(['index', 'store', 'destroy']);
+        Route::get('/api/channels/{channel}/qrcode', [ChannelController::class, 'qrCode'])->name('channels.qrcode');
+        Route::put('/api/channels/{channel}/ai', [ChannelController::class, 'updateAiSettings'])->name('channels.ai.update');
+    });
 });
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
