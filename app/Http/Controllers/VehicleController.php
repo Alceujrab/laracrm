@@ -82,19 +82,27 @@ class VehicleController extends Controller
 
     public function import(Request $request)
     {
-        $request->validate([
-            'file' => 'required|file|mimes:json,xml'
-        ]);
+        try {
+            $request->validate([
+                'file' => 'required|file'
+            ]);
 
-        $file = $request->file('file');
-        $content = file_get_contents($file->getRealPath());
-        $mime = strtolower($file->getClientOriginalExtension());
+            $file = $request->file('file');
+            $ext = strtolower($file->getClientOriginalExtension());
+            
+            if (!in_array($ext, ['json', 'xml'])) {
+                return redirect()->back()->with('error', 'Por favor, envie um arquivo com extensão .json ou .xml valída.');
+            }
 
-        $vehicles = [];
+            $content = file_get_contents($file->getRealPath());
+            $vehicles = [];
 
-        if ($mime === 'json') {
-            $data = json_decode($content, true);
-            if(is_array($data)) {
+            if ($ext === 'json') {
+                $data = json_decode($content, true);
+                if (!is_array($data)) {
+                    return redirect()->back()->with('error', 'O conteúdo do JSON não é válido ou está mal formatado.');
+                }
+                
                 $items = $data['vehicles'] ?? $data;
                 foreach($items as $item) {
                     if(isset($item['make'])) {
@@ -107,47 +115,53 @@ class VehicleController extends Controller
                             'plate' => $item['plate'] ?? null,
                             'status' => $item['status'] ?? 'available',
                             'images' => isset($item['images']) && is_array($item['images']) ? json_encode($item['images']) : null,
-                            'created_at' => now(),
-                            'updated_at' => now()
+                            'created_at' => now()->toDateTimeString(),
+                            'updated_at' => now()->toDateTimeString()
                         ];
                     }
                 }
-            }
-        } elseif ($mime === 'xml') {
-            $xml = simplexml_load_string($content);
-            if ($xml) {
-                // assume structure <vehicles><vehicle><make>...
-                $nodes = isset($xml->vehicle) ? $xml->vehicle : $xml; 
-                
-                foreach ($nodes as $node) {
-                    $images = [];
-                    if (isset($node->images->image)) {
-                        foreach ($node->images->image as $img) {
-                            $images[] = (string)$img;
+            } elseif ($ext === 'xml') {
+                libxml_use_internal_errors(true);
+                $xml = simplexml_load_string($content);
+                if ($xml !== false) {
+                    // assume structure <vehicles><vehicle><make>...
+                    $nodes = isset($xml->vehicle) ? $xml->vehicle : $xml; 
+                    
+                    foreach ($nodes as $node) {
+                        $images = [];
+                        if (isset($node->images->image)) {
+                            foreach ($node->images->image as $img) {
+                                $images[] = (string)$img;
+                            }
                         }
-                    }
 
-                    $vehicles[] = [
-                        'make' => (string)$node->make ?: 'Unknown Make',
-                        'model' => (string)$node->model ?: 'Unknown Model',
-                        'year' => (int)$node->year ?: date('Y'),
-                        'price' => (float)$node->price ?: null,
-                        'km' => (int)$node->km ?: null,
-                        'plate' => (string)$node->plate ?: null,
-                        'status' => (string)$node->status ?: 'available',
-                        'images' => !empty($images) ? json_encode($images) : null,
-                        'created_at' => now(),
-                        'updated_at' => now()
-                    ];
+                        $vehicles[] = [
+                            'make' => (string)$node->make ?: 'Unknown Make',
+                            'model' => (string)$node->model ?: 'Unknown Model',
+                            'year' => (int)$node->year ?: (int)date('Y'),
+                            'price' => (float)$node->price ?: null,
+                            'km' => (int)$node->km ?: null,
+                            'plate' => (string)$node->plate ?: null,
+                            'status' => (string)$node->status ?: 'available',
+                            'images' => !empty($images) ? json_encode($images) : null,
+                            'created_at' => now()->toDateTimeString(),
+                            'updated_at' => now()->toDateTimeString()
+                        ];
+                    }
+                } else {
+                    return redirect()->back()->with('error', 'O arquivo XML fornecido é inválido.');
                 }
             }
-        }
 
-        if (count($vehicles) > 0) {
-            Vehicle::insert($vehicles);
-            return redirect()->back()->with('success', count($vehicles) . ' veículos importados com sucesso.');
-        }
+            if (count($vehicles) > 0) {
+                Vehicle::insert($vehicles);
+                return redirect()->back()->with('success', count($vehicles) . ' veículos importados com sucesso.');
+            }
 
-        return redirect()->back()->with('error', 'Nenhum veículo válido encontrado no formato esperado.');
+            return redirect()->back()->with('error', 'Nenhum veículo válido encontrado no formato esperado.');
+
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro interno no servidor ao processar arquivo: ' . $e->getMessage());
+        }
     }
 }
