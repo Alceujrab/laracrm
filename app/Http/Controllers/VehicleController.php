@@ -124,8 +124,15 @@ class VehicleController extends Controller
                 libxml_use_internal_errors(true);
                 $xml = simplexml_load_string($content);
                 if ($xml !== false) {
-                    // assume structure <vehicles><vehicle><make>...
-                    $nodes = isset($xml->vehicle) ? $xml->vehicle : $xml; 
+                    $nodes = [];
+                    if (isset($xml->vehicle)) {
+                        $nodes = $xml->vehicle;
+                    } elseif (isset($xml->AD)) {
+                        $nodes = $xml->AD;
+                    } else {
+                        // fallback
+                        $nodes = $xml;
+                    }
                     
                     foreach ($nodes as $node) {
                         $images = [];
@@ -133,16 +140,27 @@ class VehicleController extends Controller
                             foreach ($node->images->image as $img) {
                                 $images[] = (string)$img;
                             }
+                        } elseif (isset($node->IMAGES->IMAGE_URL)) {
+                            foreach ($node->IMAGES->IMAGE_URL as $img) {
+                                $images[] = (string)$img;
+                            }
+                        }
+
+                        $make = (string)($node->make ?? $node->MAKE ?? '');
+                        $model = (string)($node->model ?? $node->MODEL ?? '');
+                        
+                        if (empty($make) && empty($model)) {
+                            continue;
                         }
 
                         $vehicles[] = [
-                            'make' => (string)$node->make ?: 'Unknown Make',
-                            'model' => (string)$node->model ?: 'Unknown Model',
-                            'year' => (int)$node->year ?: (int)date('Y'),
-                            'price' => (float)$node->price ?: null,
-                            'km' => (int)$node->km ?: null,
-                            'plate' => (string)$node->plate ?: null,
-                            'status' => (string)$node->status ?: 'available',
+                            'make' => $make ?: 'Unknown Make',
+                            'model' => $model ?: 'Unknown Model',
+                            'year' => (int)($node->year ?? $node->YEAR ?? date('Y')),
+                            'price' => (float)($node->price ?? $node->PRICE ?? null),
+                            'km' => (int)($node->km ?? $node->MILEAGE ?? null),
+                            'plate' => (string)($node->plate ?? $node->PLATE ?? null),
+                            'status' => (string)($node->status ?? 'available'),
                             'images' => !empty($images) ? json_encode($images) : null,
                             'created_at' => now()->toDateTimeString(),
                             'updated_at' => now()->toDateTimeString()
