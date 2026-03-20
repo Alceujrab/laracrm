@@ -172,12 +172,12 @@ export default function Organization({ users, groups, roles, flash }) {
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                        {users.map((user) => (
+                                        {(users || []).map((user) => (
                                             <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-750 transition-colors">
                                                 <td className="px-6 py-4 whitespace-nowrap">
                                                     <div className="flex items-center">
                                                         <div className="h-10 w-10 flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/50 rounded-full flex items-center justify-center font-bold text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                                                            {user.name.charAt(0).toUpperCase()}
+                                                            {(user?.name || '?').charAt(0).toUpperCase()}
                                                         </div>
                                                         <div className="ml-4">
                                                             <div className="text-sm font-medium text-gray-900 dark:text-white">{user.name}</div>
@@ -186,18 +186,18 @@ export default function Organization({ users, groups, roles, flash }) {
                                                     </div>
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap">
-                                                    {user.roles && user.roles.map(r => (
+                                                    {(user?.roles || []).map(r => (
                                                         <span key={r.id} className="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-bold leading-5 bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300">
                                                             {r.name === 'admin' ? <Shield className="w-3 h-3 mr-1"/> : null}
-                                                            {r.name.toUpperCase()}
+                                                            {(r?.name || 'Vazio').toUpperCase()}
                                                         </span>
                                                     ))}
                                                 </td>
                                                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                                                     <div className="flex flex-wrap gap-1">
-                                                        {user.groups && user.groups.length > 0 ? user.groups.map(g => (
+                                                        {user?.groups && user.groups.length > 0 ? user.groups.map(g => (
                                                             <span key={g.id} className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300">
-                                                                {g.name}
+                                                                {g?.name || 'Desconhecido'}
                                                             </span>
                                                         )) : (
                                                             <span className="text-gray-400 italic text-xs">Sem Fila Fixa</span>
@@ -228,7 +228,7 @@ export default function Organization({ users, groups, roles, flash }) {
                             </div>
 
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                                {groups.map((g) => (
+                                {(groups || []).map((g) => (
                                     <div key={g.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm p-6 relative group overflow-hidden">
                                         <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
                                             <button onClick={() => openEditGroup(g)} className="text-gray-400 hover:text-indigo-600"><Edit className="w-4 h-4"/></button>
@@ -319,17 +319,17 @@ export default function Organization({ users, groups, roles, flash }) {
                                     </label>
                                     <p className="text-xs text-gray-500 mb-3">Marque as filas que esta pessoa vai receber as mensagens.</p>
                                     <div className="flex flex-wrap gap-2">
-                                        {groups.map(g => (
+                                        {(groups || []).map(g => (
                                             <button 
                                                 key={g.id} type="button" 
                                                 onClick={() => toggleGroupSelection(g.id)}
                                                 className={`px-3 py-1.5 rounded-md text-sm font-medium border transition-colors ${
-                                                    memberData.groups.includes(g.id) 
+                                                    (memberData?.groups || []).includes(g.id) 
                                                     ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' 
                                                     : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300'
                                                 }`}
                                             >
-                                                {g.name}
+                                                {g?.name || 'Fila sem nome'}
                                             </button>
                                         ))}
                                     </div>

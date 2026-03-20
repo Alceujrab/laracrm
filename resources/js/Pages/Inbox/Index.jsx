@@ -61,19 +61,21 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     const audioChunksRef = useRef([]);
     const fileInputRef = useRef(null);
 
-    // Auto Refresh Polling (5s)
+    // Auto Refresh via WebSocket (Pusher/Reverb)
     useEffect(() => {
-        const interval = setInterval(async () => {
-            try {
-                if(!isRecording) {
-                    const { data } = await axios.get('/api/inbox/refresh');
-                    setConversations(data);
-                }
-            } catch (error) {
-                console.error("Erro no auto-refresh:", error);
+        if (!window.Echo) return;
+        
+        const channel = window.Echo.private('inbox');
+        channel.listen('NewMessageReceived', (e) => {
+            if (!isRecording) {
+                // Ao ouvir que chegou mensagem na fila, recarrega limpo do banco
+                axios.get('/api/inbox/refresh').then(({ data }) => setConversations(data));
             }
-        }, 5000);
-        return () => clearInterval(interval);
+        });
+
+        return () => {
+            window.Echo.leave('inbox');
+        };
     }, [isRecording]);
 
     // Timer for Recording
