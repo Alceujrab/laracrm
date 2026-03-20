@@ -83,6 +83,14 @@ class EvolutionWebhookController extends Controller
             ['status' => 'open', 'last_message_at' => now()]
         );
         $isNewChat = !$conversation->exists;
+        
+        // Se a conversa já existia mas estava fechada/resolvida, reabre ela como Nova Conversa
+        if ($conversation->exists && $conversation->status === 'closed') {
+            $conversation->status = 'open';
+            $conversation->assigned_to = null; // Tira do atendente antigo e joga na fila
+            $isNewChat = true; // Trata como novo chat para disparar Automação Mestra
+        }
+        
         $conversation->last_message_at = now();
         $conversation->save();
 
