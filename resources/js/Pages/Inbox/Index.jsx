@@ -62,6 +62,8 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     const fileInputRef = useRef(null);
 
     // Auto Refresh via WebSocket (Pusher/Reverb)
+    const [idleAlert, setIdleAlert] = useState(null);
+
     useEffect(() => {
         if (!window.Echo) return;
         
@@ -73,10 +75,38 @@ export default function InboxIndex({ conversations: initialConversations = [], u
             }
         });
 
+        // Ouvinte Privado do Vigia de Ociosidade (Alarme de Lentidão)
+        if (auth?.user?.id) {
+            const myChannel = window.Echo.private(`App.Models.User.${auth.user.id}`);
+            myChannel.listen('OperatorIdleWarningEvent', (e) => {
+                // Bipe Sonoro usando API de Áudio Nativa do Browser
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const os = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    os.connect(gain);
+                    gain.connect(ctx.destination);
+                    os.type = 'triangle';
+                    os.frequency.setValueAtTime(600, ctx.currentTime);
+                    os.frequency.exponentialRampToValueAtTime(800, ctx.currentTime + 0.1);
+                    gain.gain.setValueAtTime(0.2, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.4);
+                    os.start();
+                    os.stop(ctx.currentTime + 0.5);
+                } catch(err) { console.log("Erro no audio", err); }
+
+                setIdleAlert(e);
+                
+                // Limpa balão depois de 15 segundos
+                setTimeout(() => setIdleAlert(null), 15000);
+            });
+        }
+
         return () => {
             window.Echo.leave('inbox');
+            if (auth?.user?.id) window.Echo.leave(`App.Models.User.${auth.user.id}`);
         };
-    }, [isRecording]);
+    }, [isRecording, auth]);
 
     // Timer for Recording
     useEffect(() => {
@@ -283,6 +313,24 @@ export default function InboxIndex({ conversations: initialConversations = [], u
 
             {/* Hidden File Input */}
             <input type="file" ref={fileInputRef} hidden onChange={handleFileSelect} />
+
+            {/* Banner de Alerta de Ociosidade de Vendedor (Over UI) */}
+            {idleAlert && (
+                <div className="fixed top-6 right-6 z-[100] animate-bounce">
+                    <div className="bg-red-600 text-white px-6 py-4 rounded-xl shadow-2xl flex items-center max-w-sm border-2 border-red-400">
+                        <div className="mr-3 bg-red-800 p-2 rounded-full hidden sm:block">
+                            <Zap className="w-8 h-8 text-yellow-300 animate-pulse" />
+                        </div>
+                        <div className="flex-1">
+                            <h4 className="font-extrabold text-lg uppercase tracking-wider mb-1">Atraso Crítico!</h4>
+                            <p className="text-sm font-medium leading-snug">{idleAlert.message}</p>
+                        </div>
+                        <button onClick={() => setIdleAlert(null)} className="ml-4 p-1.5 hover:bg-red-700 rounded transition-colors text-red-200 hover:text-white">
+                            <X className="w-5 h-5"/>
+                        </button>
+                    </div>
+                </div>
+            )}
 
             <div className="flex h-[calc(100vh-4rem)] w-full overflow-hidden">
                 

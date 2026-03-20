@@ -61,8 +61,13 @@ class ProcessAiReplyJob implements ShouldQueue
                           $contextText . 
                           "\nBaseado neste histórico, crie a próxima resposta para o cliente.";
 
+            // Injeta o Horário Local do Servidor Invisivelmente
+            $currentTimeContext = "[MENSAGEM DE SISTEMA: A hora atual exata é " . now()->format('H:i') . 
+                                  " do dia " . now()->format('d/m/Y') . " (" . now()->locale('pt_BR')->translatedFormat('l') . ")." . 
+                                  " Use esta informação para guiar suas decisões caso o cliente pergunte de horário ou caso sua regra de negócio limite o horário de atendimento.]\n\n";
+
             // Instrukções Dinâmicas do Canal
-            $systemInstructions = $channel->ai_prompt ?? "Você é um assistente virtual atencioso.";
+            $systemInstructions = $currentTimeContext . ($channel->ai_prompt ?? "Você é um assistente virtual atencioso.");
 
             // 2. Chamar a IA (Laravel AI 0.3x)
             $agent = AnonymousAgent::make($systemInstructions, [], []);
