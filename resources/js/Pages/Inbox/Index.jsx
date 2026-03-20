@@ -61,18 +61,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     const audioChunksRef = useRef([]);
     const fileInputRef = useRef(null);
 
-    // Auto Refresh via WebSocket (Pusher/Reverb)
     const [idleAlert, setIdleAlert] = useState(null);
-
-    const messagesEndRef = useRef(null);
-
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [activeConv?.messages]);
 
     useEffect(() => {
         if (!window.Echo) return;
@@ -291,6 +280,13 @@ export default function InboxIndex({ conversations: initialConversations = [], u
         }
     }, [filteredConversations.length]);
 
+    const messagesEndRef = useRef(null);
+    const scrollToBottom = () => {
+        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    };
+    useEffect(() => {
+        scrollToBottom();
+    }, [activeConv?.messages, activeConvId]);
 
     const getInitials = (name) => {
         if (!name) return '??';
