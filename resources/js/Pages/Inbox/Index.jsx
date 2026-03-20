@@ -119,6 +119,50 @@ export default function InboxIndex({ conversations: initialConversations = [], u
         return () => clearInterval(interval);
     }, [isRecording]);
 
+    const sendVehicleMedia = async (v) => {
+        if (!activeConvId || sending) return;
+        setIsCatalogOpen(false);
+        setSending(true);
+
+        try {
+            const kmFmt = v.km ? v.km.toLocaleString('pt-BR') : '--';
+            const priceFmt = v.price ? parseFloat(v.price).toLocaleString('pt-BR', {minimumFractionDigits: 2}) : 'Sob Consulta';
+            const textContent = `🚗 *${v.make} ${v.model}*\n📅 Ano: ${v.year} | 🛣️ KM: ${kmFmt}\n💰 Preço: R$ ${priceFmt}\n\nGostou desta oferta?`;
+            
+            const images = typeof v.images === 'string' ? JSON.parse(v.images) : (v.images || []);
+            
+            if (images.length === 0) {
+                const fd = new FormData();
+                fd.append('content', textContent);
+                fd.append('type', 'text');
+                await axios.post(`/api/inbox/${activeConvId}/message`, fd);
+            } else {
+                const maxPhotos = Math.min(images.length, 5);
+                for (let i = 0; i < maxPhotos; i++) {
+                    const res = await fetch(images[i].startsWith('http') ? images[i] : `/storage/${images[i]}`);
+                    const blob = await res.blob();
+                    
+                    const fd = new FormData();
+                    if (i === 0) fd.append('content', textContent); // Legenda vai apenas na 1ª foto
+                    fd.append('type', 'image');
+                    
+                    let ext = blob.type.split('/')[1] || 'jpg';
+                    fd.append('file', new File([blob], `vehicle_photo_${i}.${ext}`, {type: blob.type}));
+
+                    await axios.post(`/api/inbox/${activeConvId}/message`, fd, { headers: { 'Content-Type': 'multipart/form-data' }});
+                }
+            }
+            
+            const { data } = await axios.get('/api/inbox/refresh');
+            setConversations(data);
+        } catch (err) {
+            alert("Erro ao enviar mídias do veículo: " + err.message);
+            console.error(err);
+        } finally {
+            setSending(false);
+        }
+    };
+
     // Master Send Payload Form
     const sendPayload = async (fileObj = null, forcedType = null) => {
         if (!activeConvId || sending) return;
@@ -582,11 +626,11 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                 </div>
                                 <div className="max-h-80 overflow-y-auto p-3 grid grid-cols-2 gap-3">
                                     {vehicles.map(v => (
-                                        <div key={v.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden group hover:border-indigo-500 cursor-pointer transition-colors"
-                                             onClick={() => insertText(`*Confira este modelo que acabou de chegar!*\n\n🚘 ${v.make} ${v.model}\n📅 Ano: ${v.year}\n💰 Preço: R$ ${parseFloat(v.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`)}
+                                        <div key={v.id} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden group hover:border-indigo-500 cursor-pointer transition-colors bg-white dark:bg-gray-900 flex flex-col"
+                                             onClick={() => sendVehicleMedia(v)}
                                         >
                                             {/* Preview Image mock */}
-                                            <div className="h-24 bg-gray-100 dark:bg-gray-900 w-full flex items-center justify-center relative overflow-hidden">
+                                            <div className="h-28 bg-gray-100 dark:bg-gray-800 w-full flex items-center justify-center relative overflow-hidden">
                                                 {v.images && v.images.length > 0 ? (
                                                     <img src={'/storage/'+v.images[0]} className="object-cover w-full h-full" alt="carro" />
                                                 ) : <Car className="w-8 h-8 text-gray-300 dark:text-gray-700" />}

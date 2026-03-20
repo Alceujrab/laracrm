@@ -10,6 +10,7 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isEditModalOpen, setIsEditModalOpen] = useState(false);
     const [editingVehicle, setEditingVehicle] = useState(null);
+    const [viewingVehicle, setViewingVehicle] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
@@ -223,12 +224,15 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                                             </span>
                                         </div>
 
+                                        {/* Clickable Area for Viewing Details */}
+                                        <div className="absolute inset-0 z-0 cursor-pointer" onClick={() => setViewingVehicle(v)}></div>
+
                                         {/* Hover Actions */}
                                         <div className="absolute top-3 right-3 z-10 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1">
-                                            <button onClick={() => openEditModal(v)} className="p-1.5 bg-white/90 dark:bg-gray-800/90 hover:bg-indigo-50 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-md backdrop-blur-sm shadow-sm transition-colors">
+                                            <button onClick={(e) => { e.stopPropagation(); openEditModal(v); }} className="p-1.5 bg-white/90 dark:bg-gray-800/90 hover:bg-indigo-50 dark:hover:bg-indigo-900 text-indigo-600 dark:text-indigo-400 rounded-md backdrop-blur-sm shadow-sm transition-colors relative z-20">
                                                 <Edit className="w-4 h-4" />
                                             </button>
-                                            <button onClick={() => handleDelete(v.id)} className="p-1.5 bg-white/90 dark:bg-gray-800/90 hover:bg-red-50 dark:hover:bg-red-900 text-red-600 dark:text-red-400 rounded-md backdrop-blur-sm shadow-sm transition-colors">
+                                            <button onClick={(e) => { e.stopPropagation(); handleDelete(v.id); }} className="p-1.5 bg-white/90 dark:bg-gray-800/90 hover:bg-red-50 dark:hover:bg-red-900 text-red-600 dark:text-red-400 rounded-md backdrop-blur-sm shadow-sm transition-colors relative z-20">
                                                 <Trash2 className="w-4 h-4" />
                                             </button>
                                         </div>
@@ -342,7 +346,101 @@ export default function CatalogIndex({ vehicles = [], setting, flash }) {
                                     )}
                                 </button>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
+            {/* Modal VIEW Vehicle */}
+            {viewingVehicle && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-gray-900/80 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-800/50">
+                            <h3 className="text-xl font-bold text-gray-900 dark:text-white flex items-center">
+                                {viewingVehicle.make} <span className="font-light ml-1.5">{viewingVehicle.model}</span>
+                            </h3>
+                            <button onClick={() => setViewingVehicle(null)} className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded-full text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 transition-colors">
+                                <X className="w-6 h-6" />
+                            </button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto p-6 md:flex md:space-x-8">
+                            {/* Fotos Gallery */}
+                            <div className="md:w-3/5 space-y-4">
+                                {(() => {
+                                    const vImgs = viewingVehicle.images && typeof viewingVehicle.images === 'string' ? JSON.parse(viewingVehicle.images) : (viewingVehicle.images || []);
+                                    if(vImgs.length === 0) {
+                                        return (
+                                            <div className="h-64 sm:h-80 bg-gray-100 dark:bg-gray-900 rounded-xl flex flex-col items-center justify-center">
+                                                <ImageIcon className="w-16 h-16 text-gray-300 dark:text-gray-700 mb-4" />
+                                                <span className="text-gray-400 dark:text-gray-500 font-medium tracking-wide uppercase">Sem fotos</span>
+                                            </div>
+                                        );
+                                    }
+                                    return (
+                                        <>
+                                            <div className="w-full h-64 sm:h-96 rounded-xl overflow-hidden shadow-sm border border-gray-200 dark:border-gray-700">
+                                                <img 
+                                                    src={vImgs[0].startsWith('http') ? vImgs[0] : `/storage/${vImgs[0]}`} 
+                                                    alt="Foto Principal" 
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+                                                {vImgs.slice(1).map((img, i) => (
+                                                    <div key={i} className="aspect-square rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 hover:opacity-80 transition-opacity cursor-pointer">
+                                                        <img 
+                                                            src={img.startsWith('http') ? img : `/storage/${img}`} 
+                                                            className="w-full h-full object-cover" 
+                                                            alt={`Foto ${i+2}`} 
+                                                        />
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+
+                            {/* Informações */}
+                            <div className="md:w-2/5 mt-8 md:mt-0 flex flex-col">
+                                <div className="mb-6">
+                                    <span className={`inline-block px-3 py-1 text-xs font-bold uppercase tracking-wider rounded-md shadow-sm mb-4 ${
+                                        viewingVehicle.status === 'available' ? 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300' : 
+                                        viewingVehicle.status === 'sold' ? 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-300' : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300'
+                                    }`}>
+                                        {viewingVehicle.status === 'available' ? 'Disponível' : viewingVehicle.status === 'sold' ? 'Vendido' : 'Reservado'}
+                                    </span>
+                                    
+                                    <p className="text-4xl font-black text-indigo-600 dark:text-indigo-400 tracking-tight">
+                                        {viewingVehicle.price ? `R$ ${parseFloat(viewingVehicle.price).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : 'Sob Consulta'}
+                                    </p>
+                                </div>
+
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 space-y-4">
+                                    <div className="flex flex-col border-b border-gray-200 dark:border-gray-700 pb-3">
+                                        <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Ano</span>
+                                        <span className="text-lg font-medium text-gray-900 dark:text-gray-100 mt-0.5">{viewingVehicle.year}</span>
+                                    </div>
+                                    <div className="flex flex-col border-b border-gray-200 dark:border-gray-700 pb-3">
+                                        <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Quilometragem (KM)</span>
+                                        <span className="text-lg font-medium text-gray-900 dark:text-gray-100 mt-0.5">{viewingVehicle.km ? viewingVehicle.km.toLocaleString('pt-BR') : '--'}</span>
+                                    </div>
+                                    <div className="flex flex-col">
+                                        <span className="text-[11px] font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">Placa / Referência</span>
+                                        <span className="text-lg font-medium text-gray-900 dark:text-gray-100 mt-0.5 uppercase">{viewingVehicle.plate || '--'}</span>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-auto pt-6 flex gap-3">
+                                    <button 
+                                        onClick={() => { setViewingVehicle(null); openEditModal(viewingVehicle); }}
+                                        className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 dark:hover:bg-indigo-800 font-bold rounded-xl transition-colors flex justify-center items-center"
+                                    >
+                                        <Edit className="w-4 h-4 mr-2" /> Editar Ficha
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
