@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<vehicles>
+    <vehicle>
+        <make>Ferrari</make>
+        <model>F8 Tributo</model>
+        <year>2021</year>
+        <price>3500000.00</price>
+        <km>2500</km>
+        <plate>FER-0008</plate>
+        <status>available</status>
+        <images>
+            <image>https://cdn.motor1.com/images/mgl/1zxpq/s1/ferrari-f8-tributo.jpg</image>
+        </images>
+    </vehicle>
+    <vehicle>
+        <make>Lamborghini</make>
+        <model>Urus</model>
+        <year>2023</year>
+        <price>4200000.00</price>
+        <km>5000</km>
+        <plate>LMB-9999</plate>
+        <status>available</status>
+        <images>
+            <image>https://cdn.motor1.com/images/mgl/qjbxR/s1/lamborghini-urus-performante.jpg</image>
+        </images>
+    </vehicle>
+</vehicles>

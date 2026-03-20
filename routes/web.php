@@ -70,6 +70,10 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/api/tasks/{task}', [TaskController::class, 'destroy'])->name('api.tasks.destroy');
     
     Route::get('/catalog', [VehicleController::class, 'index'])->name('catalog.index');
+    Route::post('/catalog', [VehicleController::class, 'store'])->name('catalog.store');
+    Route::put('/catalog/{vehicle}', [VehicleController::class, 'update'])->name('catalog.update');
+    Route::delete('/catalog/{vehicle}', [VehicleController::class, 'destroy'])->name('catalog.destroy');
+    Route::post('/catalog/import', [VehicleController::class, 'import'])->name('catalog.import');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
 
