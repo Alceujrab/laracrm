@@ -266,6 +266,19 @@ export default function AutomationsSettings() {
                                             />
                                         </div>
                                     )}
+
+                                    {form.action_type === 'send_message' && (
+                                        <div className="md:col-span-2">
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Texto da Mensagem</label>
+                                            <textarea 
+                                                required placeholder="Ex: Olá! Bem-vindo à Elite Veículos. Digite a opção desejada..."
+                                                rows="4"
+                                                className="w-full bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 text-gray-900 dark:text-white rounded-lg px-4 py-2.5"
+                                                value={form.action_payload.message || ''} 
+                                                onChange={(e) => setForm({...form, action_payload: { message: e.target.value }})}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

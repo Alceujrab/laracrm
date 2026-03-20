@@ -38,10 +38,26 @@ class AutomationActionService
                     break;
 
                 case 'send_message':
-                    // TODO: Re-aproveitar a EvolutionApiService para enviar o payload['message']
+                    if (isset($context['conversation_id']) && !empty($payload['message'])) {
+                        $conv = Conversation::with(['contact', 'channel'])->find($context['conversation_id']);
+                        if ($conv && $conv->contact && $conv->channel) {
+                            app(\App\Services\EvolutionApiService::class)->sendMessage(
+                                $conv->channel->identifier,
+                                $conv->contact->phone,
+                                $payload['message']
+                            );
+                            
+                            // Registra no CRM
+                            $message = \App\Models\Message::create([
+                                'conversation_id' => $conv->id,
+                                'sender_type' => 'user', // Bot da automação agindo como staff
+                                'content' => $payload['message'],
+                                'type' => 'text'
+                            ]);
+                            broadcast(new \App\Events\NewMessageReceived($message));
+                        }
+                    }
                     break;
-                    
-                case 'add_tag':
                     // TODO: Implementar quando houver o sistema de Tags
                     break;
             }
