@@ -83,6 +83,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/catalog/sync/force', [VehicleController::class, 'forceSync'])->name('catalog.sync.force');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'exportPdf'])->name('reports.export');
 
     // Proposals
     Route::get('/proposals', [ProposalController::class, 'index'])->name('proposals.index');

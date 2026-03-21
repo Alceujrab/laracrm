@@ -6,26 +6,13 @@ import {
     Download, Calendar as CalendarIcon, TrendingUp, Users, Briefcase, Percent,
     CheckCircle, Inbox, Trophy, BarChart2
 } from 'lucide-react';
-/* import {
+import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
     ResponsiveContainer, PieChart, Pie, Cell, Legend,
     BarChart, Bar, LabelList
-} from 'recharts'; */
+} from 'recharts';
 
-const AreaChart = () => null;
-const Area = () => null;
-const XAxis = () => null;
-const YAxis = () => null;
-const CartesianGrid = () => null;
-const RechartsTooltip = () => null;
-const ResponsiveContainer = ({children}) => <div>{children}</div>;
-const PieChart = () => null;
-const Pie = () => null;
-const Cell = () => null;
-const Legend = () => null;
-const BarChart = () => null;
-const Bar = () => null;
-const LabelList = () => null;
+
 
 const ICON_MAP = {
     'briefcase':     Briefcase,
@@ -144,7 +131,10 @@ export default function ReportsIndex({ stats = {} }) {
                             </button>
                         ))}
                     </div>
-                    <button className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm">
+                    <button 
+                        onClick={() => window.location.href = '/reports/export'}
+                        className="flex items-center px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors shadow-sm"
+                    >
                         <Download className="w-4 h-4 mr-2" /> Exportar PDF
                     </button>
                 </div>

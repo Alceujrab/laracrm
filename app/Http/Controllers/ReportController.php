@@ -124,7 +124,7 @@ class ReportController extends Controller
             ->select(DB::raw('AVG(TIMESTAMPDIFF(MINUTE, conversations.created_at, first_replies.first_reply_at)) as avg_time'))
             ->first();
 
-        $avgResponseMinutes = $avgResponseData ? $avgResponseData->avg_time : null;
+        $avgResponseMinutes = $avgResponseData ? ($avgResponseData->avg_time ?? null) : null;
         $avgResponseTime = $avgResponseMinutes ? round($avgResponseMinutes) . "m" : "0m";
 
         // 9. Operator leaderboard (Required by frontend)
@@ -149,5 +149,76 @@ class ReportController extends Controller
                 'avgResponseTime'   => $avgResponseTime
             ]
         ]);
+    }
+
+    public function exportPdf()
+    {
+        // Reutiliza a lógica de KPIs
+        $activeDealsCount = Deal::where('status', 'open')->count();
+        $totalDealsValue  = Deal::where('status', 'open')->sum('value');
+        $wonCount         = Deal::where('status', 'won')->count();
+        $totalEnded       = Deal::whereIn('status', ['won', 'lost'])->count();
+        $conversionRate   = $totalEnded > 0 ? round(($wonCount / $totalEnded) * 100, 1) : 0;
+
+        $html = "
+        <style>
+            body { font-family: sans-serif; color: #333; }
+            .header { text-align: center; margin-bottom: 30px; }
+            .kpi-grid { display: block; width: 100%; }
+            .kpi-card { width: 45%; display: inline-block; margin: 10px; padding: 15px; border: 1px solid #ddd; border-radius: 8px; }
+            .kpi-title { font-size: 12px; color: #666; text-transform: uppercase; }
+            .kpi-value { font-size: 20px; font-weight: bold; margin-top: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+            th, td { border: 1px solid #eee; padding: 10px; text-align: left; font-size: 12px; }
+            th { background: #f9f9f9; }
+        </style>
+        <div class='header'>
+            <h1>Relatório de Performance - LaraCRM</h1>
+            <p>Gerado em: " . date('d/m/Y H:i') . "</p>
+        </div>
+        <div class='kpi-grid'>
+            <div class='kpi-card'>
+                <div class='kpi-title'>Negociações Ativas</div>
+                <div class='kpi-value'>$activeDealsCount</div>
+            </div>
+            <div class='kpi-card'>
+                <div class='kpi-title'>Volume em Pipeline</div>
+                <div class='kpi-value'>R$ " . number_format($totalDealsValue, 2, ',', '.') . "</div>
+            </div>
+            <div class='kpi-card'>
+                <div class='kpi-title'>Taxa de Conversão</div>
+                <div class='kpi-value'>$conversionRate %</div>
+            </div>
+            <div class='kpi-card'>
+                <div class='kpi-title'>Negócios Ganhos</div>
+                <div class='kpi-value'>$wonCount</div>
+            </div>
+        </div>
+        <h3>Ranking de Operadores</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Operador</th>
+                    <th>Resolvidas</th>
+                </tr>
+            </thead>
+            <tbody>";
+        
+        $operatorStats = User::select('users.name')
+            ->join('conversations', 'conversations.assigned_to', '=', 'users.id')
+            ->where('conversations.status', 'resolved')
+            ->selectRaw('COUNT(conversations.id) as resolved_count')
+            ->groupBy('users.name')
+            ->orderByDesc('resolved_count')
+            ->get();
+
+        foreach($operatorStats as $op) {
+            $html .= "<tr><td>{$op->name}</td><td>{$op->resolved_count}</td></tr>";
+        }
+
+        $html .= "</tbody></table>";
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        return $pdf->download('relatorio-performance-' . date('Y-m-d') . '.pdf');
     }
 }
