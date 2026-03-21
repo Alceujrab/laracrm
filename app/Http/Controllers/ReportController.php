@@ -12,6 +12,7 @@ use App\Models\Message;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class ReportController extends Controller
 {
@@ -218,7 +219,7 @@ class ReportController extends Controller
 
         $html .= "</tbody></table>";
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html);
+        $pdf = Pdf::loadHTML($html);
         return $pdf->download('relatorio-performance-' . date('Y-m-d') . '.pdf');
     }
 }
