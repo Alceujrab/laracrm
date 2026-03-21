@@ -91,7 +91,9 @@ Route::middleware(['auth'])->group(function () {
 
     // Bot Knowledge Base
     Route::get('/settings/knowledge', [KnowledgeItemController::class, 'index'])->name('settings.knowledge.index');
+    Route::get('/settings/knowledge/suggestions', [KnowledgeItemController::class, 'generateSuggestions'])->name('settings.knowledge.suggestions');
     Route::post('/settings/knowledge', [KnowledgeItemController::class, 'store'])->name('settings.knowledge.store');
+    Route::post('/settings/knowledge/import', [KnowledgeItemController::class, 'import'])->name('settings.knowledge.import');
     Route::delete('/settings/knowledge/{id}', [KnowledgeItemController::class, 'destroy'])->name('settings.knowledge.destroy');
 
     // --- ROTAS ADMINISTRATIVAS (Somente Admin) ---
