@@ -7,8 +7,8 @@ import {
 import Dropdown from '@/Components/Dropdown';
 
 export default function Topbar({ activeModule = 'inbox' }) {
-    const { user } = usePage().props.auth;
-    const [workspace] = useState('CF Auto CRM');
+    const { auth, app_settings } = usePage().props;
+    const { user } = auth;
 
     const modules = [
         { id: 'inbox', label: 'Caixa de Entrada', icon: Mail, route: 'inbox.index' },
@@ -79,8 +79,11 @@ export default function Topbar({ activeModule = 'inbox' }) {
 
                 {/* Workspace Selector */}
                 <div className="hidden lg:block border-l border-r border-gray-200 dark:border-gray-700 px-4">
-                    <button className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors">
-                        {workspace}
+                    <button className="flex items-center text-sm font-medium text-gray-700 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition-colors gap-2">
+                        {app_settings.app_logo && (
+                            <img src={app_settings.app_logo} alt="Logo" className="h-6 object-contain" />
+                        )}
+                        <span>{app_settings.app_name}</span>
                         <ChevronDown className="ml-1 h-4 w-4" />
                     </button>
                 </div>

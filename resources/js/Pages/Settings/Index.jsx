@@ -13,6 +13,7 @@ import ProfileTab from './Profile';
 import CustomFieldsTab from './CustomFields';
 import QuickRepliesTab from './QuickReplies';
 import OrganizationTab from './Organization';
+import GeneralTab from './General';
 
 export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles = [] }) {
     const { auth, flash } = usePage().props;
@@ -445,7 +446,7 @@ export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles 
             {activeTab === 'canais' && renderCanais()}
             {activeTab === 'bots' && renderBotBuilderMockup()}
             {activeTab === 'perfil' && <ProfileTab user={user} />}
-            {activeTab === 'geral' && renderPlaceholder('Configurações Gerais', 'Upload da Logo, Fuso Horário, e Moeda Oficial do ambiente.')}
+            {activeTab === 'geral' && <GeneralTab />}
             {activeTab === 'org' && <OrganizationTab users={orgUsers} groups={orgGroups} roles={orgRoles} flash={flash} />}
             {activeTab === 'membros' && renderPlaceholder('Gerenciamento de Equipe', 'Tabela de agentes e botão Cadastrar Operador.')}
             {activeTab === 'permissoes' && renderPlaceholder('Permissões RBAC', 'Toggles lógicos sobre restrições de Caixa de Entrada e Negócios.')}

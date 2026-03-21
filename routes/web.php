@@ -9,6 +9,7 @@ use App\Http\Controllers\TaskController;
 use App\Http\Controllers\DealStageController;
 use App\Http\Controllers\EvolutionWebhookController;
 use App\Http\Controllers\ChannelController;
+use App\Http\Controllers\AppSettingsController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -125,6 +126,9 @@ Route::middleware(['auth'])->group(function () {
         Route::apiResource('/api/custom-fields', \App\Http\Controllers\CustomFieldController::class)->except(['show']);
         Route::get('/api/custom-fields/values', [\App\Http\Controllers\CustomFieldController::class, 'getValues'])->name('custom-fields.values');
         Route::post('/api/custom-fields/values', [\App\Http\Controllers\CustomFieldController::class, 'saveValues'])->name('custom-fields.values.save');
+
+        // Configurações Gerais
+        Route::post('/settings/general', [AppSettingsController::class, 'update'])->name('settings.general.update');
     });
 });
 Route::middleware('auth')->group(function () {
