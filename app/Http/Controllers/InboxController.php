@@ -129,75 +129,41 @@ class InboxController extends Controller
         }
 
         $credentials = $channel->credentials ?? [];
-        $apiUrl = $credentials['evolution_url'] ?? null;
-        $apiKey = $credentials['api_key'] ?? null;
+        $apiUrl      = $credentials['evolution_url'] ?? null;
+        $apiKey      = $credentials['api_key'] ?? null;
         $instanceName = $channel->identifier;
 
-        $images = $request->images;
-        $caption = $request->caption ?? '';
+        $images    = $request->images;
+        $caption   = $request->caption ?? '';
         $maxPhotos = min(count($images), 5);
 
         for ($i = 0; $i < $maxPhotos; $i++) {
-            $img = $images[$i];
-            $url = str_starts_with($img, 'http') ? $img : url('/storage/' . $img);
-            
+            $img      = $images[$i];
+            // Use the original public S3 URL directly – no local download needed
+            $mediaUrl = str_starts_with($img, 'http') ? $img : url('/storage/' . $img);
+
+            $curCaption = ($i === 0) ? $caption : '';
+            $fileName   = "vehicle_" . ($i + 1) . ".jpg";
+
             try {
-                // S3 firewalls usually block PHP's default User-Agent. Let's masquerade.
-                $response = \Illuminate\Support\Facades\Http::withOptions([
-                    'verify' => false,
-                ])->withHeaders([
-                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-                    'Accept' => 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8',
-                ])->get($url);
-
-                if (!$response->successful()) {
-                    \Illuminate\Support\Facades\Log::error("Vehicle image fetch failed ($url): HTTP " . $response->status());
-                    continue;
-                }
-                
-                $imageContents = $response->body();
-                if (empty($imageContents)) continue;
-                
-                $finfo = new \finfo(FILEINFO_MIME_TYPE);
-                $mimeType = $finfo->buffer($imageContents);
-                
-                if (!str_starts_with($mimeType, 'image/')) {
-                    \Illuminate\Support\Facades\Log::warning("Vehicle image downloaded but invalid mime ($mimeType). Reverting to jpeg.");
-                    $mimeType = 'image/jpeg';
-                }
-                
-                $ext = explode('/', $mimeType)[1] ?? 'jpg';
-                $fileName = "vehicle_" . uniqid() . ".{$ext}";
-                
-                $localPath = 'messages/' . $fileName;
-                \Illuminate\Support\Facades\Storage::disk('public')->put($localPath, $imageContents);
-                $attachmentUrl = '/storage/' . $localPath;
-
-                // Evolution (Baileys) exige Base64 cru OU Data URI dependendo da config. 
-                // A Evolution API recomenda enviar a string Base64 "raw" se der pau com data URI.
-                // Manteremos data URI para compatibilidade com o sendMessage, mas vamos tratar caso a API recuse
-                $base64Data = base64_encode($imageContents);
-                $base64 = "data:{$mimeType};base64,{$base64Data}";
-                
-                $curCaption = ($i === 0) ? $caption : '';
-
                 if ($apiUrl && $apiKey && $instanceName) {
-                    $evolutionApi->sendMedia($apiUrl, $apiKey, $instanceName, $contact->phone, $base64, 'image', $fileName, $curCaption);
+                    // sendMediaUrl passes the URL to Evolution API which fetches it directly
+                    $evolutionApi->sendMediaUrl($apiUrl, $apiKey, $instanceName, $contact->phone, $mediaUrl, 'image', $fileName, $curCaption);
                 }
 
                 $message = \App\Models\Message::create([
                     'conversation_id' => $conversation->id,
-                    'sender_type' => 'user',
-                    'sender_id' => auth()->id(),
-                    'content' => $curCaption,
-                    'type' => 'image',
-                    'attachment_url' => $attachmentUrl
+                    'sender_type'     => 'user',
+                    'sender_id'       => auth()->id(),
+                    'content'         => $curCaption,
+                    'type'            => 'image',
+                    'attachment_url'  => $mediaUrl,
                 ]);
-                
+
                 broadcast(new \App\Events\NewMessageReceived($message))->toOthers();
 
             } catch (\Exception $e) {
-                \Illuminate\Support\Facades\Log::error("Vehicle proxy transfer failed: " . $e->getMessage());
+                \Illuminate\Support\Facades\Log::error("Vehicle media send failed ($mediaUrl): " . $e->getMessage());
             }
         }
 
