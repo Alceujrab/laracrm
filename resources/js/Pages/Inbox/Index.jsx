@@ -5,7 +5,7 @@ import { Head, usePage } from '@inertiajs/react';
 import { 
     Inbox, User, Clock, Archive, Plus, Search, MoreVertical, 
     FileText, Check, Paperclip, Smile, Zap, List, Mic, Info,
-    Phone, MessageSquare, Tag, Briefcase, Calendar, Car, X, Edit, ChevronDown, ChevronUp, StopCircle
+    Phone, MessageSquare, Tag, Briefcase, Calendar, Car, X, Edit, ChevronDown, ChevronUp, StopCircle, AtSign
 } from 'lucide-react';
 import CreateDealModal from '@/Components/Deal/CreateDealModal';
 import NewConversationModal from '@/Components/Inbox/NewConversationModal';
