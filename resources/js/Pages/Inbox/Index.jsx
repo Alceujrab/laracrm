@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import CreateDealModal from '@/Components/Deal/CreateDealModal';
 import NewConversationModal from '@/Components/Inbox/NewConversationModal';
+import CreateProposalModal from '@/Components/Inbox/CreateProposalModal';
 
 /* Emojis mais usados em atendimento */
 const EMOJI_LIST = [
@@ -49,6 +50,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     const [channelFilter, setChannelFilter] = useState('all'); // all, whatsapp, instagram, messenger
     const [statusFilter, setStatusFilter] = useState('open'); // open, resolved, all
     const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
+    const [isProposalModalOpen, setIsProposalModalOpen] = useState(false);
     const [newTag, setNewTag] = useState('');
 
     // V3 Modals and Popovers
@@ -839,14 +841,22 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{activeConv.contact?.phone || 'Sem número'}</p>
                             
                             <div className="w-full mt-2">
-                                <button 
-                                    onClick={() => setIsCreateDealModalOpen(true)}
-                                    className="w-full flex justify-center items-center py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-semibold shadow-sm"
-                                >
-                                    <Briefcase className="w-4 h-4 mr-2" /> 
-                                    Transformar em Negócio
-                                </button>
-                            </div>
+                                    <button 
+                                        onClick={() => setIsCreateDealModalOpen(true)}
+                                        className="w-full flex justify-center items-center py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition-colors text-sm font-semibold shadow-sm"
+                                    >
+                                        <Briefcase className="w-4 h-4 mr-2" /> 
+                                        Transformar em Negócio
+                                    </button>
+
+                                    <button 
+                                        onClick={() => setIsProposalModalOpen(true)}
+                                        className="w-full mt-3 flex justify-center items-center py-2.5 bg-white border border-indigo-600 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors text-sm font-semibold shadow-sm"
+                                    >
+                                        <FileText className="w-4 h-4 mr-2" /> 
+                                        Gerar Proposta
+                                    </button>
+                                </div>
                         </div>
 
                         <div className="flex-1 overflow-y-auto p-4">
@@ -928,6 +938,15 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                 }}
             />
 
+            <CreateProposalModal 
+                isOpen={isProposalModalOpen} 
+                onClose={() => setIsProposalModalOpen(false)}
+                conversation={selectedConversation}
+                onSuccess={(proposal) => {
+                    // Abrir o PDF em nova aba ao criar
+                    window.open(`/proposals/${proposal.id}/download`, '_blank');
+                }}
+            />
         </AuthenticatedLayout>
     );
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\InboxController;
 use App\Http\Controllers\CrmController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\ReportController;
+use App\Http\Controllers\ProposalController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\DealStageController;
 use App\Http\Controllers\EvolutionWebhookController;
@@ -81,6 +82,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/catalog/sync/force', [VehicleController::class, 'forceSync'])->name('catalog.sync.force');
 
     Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+
+    // Proposals
+    Route::get('/proposals', [ProposalController::class, 'index'])->name('proposals.index');
+    Route::post('/api/proposals', [ProposalController::class, 'store'])->name('proposals.store');
+    Route::get('/proposals/{proposal}/download', [ProposalController::class, 'downloadPdf'])->name('proposals.download');
 
     // --- ROTAS ADMINISTRATIVAS (Somente Admin) ---
     Route::middleware(['role:admin'])->group(function () {
