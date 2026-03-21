@@ -30,10 +30,16 @@ class EvolutionWebhookController extends Controller
         }
 
         // Recupera o Canal usando o identifier de instância
-        $channel = Channel::firstOrCreate(
-            ['identifier' => $instanceName],
-            ['name' => 'Instância ' . $instanceName, 'type' => 'whatsapp', 'status' => 'connected']
-        );
+        // Alterado de firstOrCreate para firstOrNew para evitar forçar tipo 'whatsapp' em instâncias existentes
+        $channel = Channel::where('identifier', $instanceName)->first();
+        if (!$channel) {
+            $channel = Channel::create([
+                'identifier' => $instanceName,
+                'name' => 'Instância ' . $instanceName,
+                'type' => 'whatsapp', // Default para novas, mas o usuário deve configurar
+                'status' => 'connected'
+            ]);
+        }
 
         $dataNode = $payload['data'] ?? [];
         if (empty($dataNode)) {
@@ -54,11 +60,13 @@ class EvolutionWebhookController extends Controller
             return response()->json(['status' => 'ignored_group_or_status']);
         }
 
-        // Extrai telefone (JID) e Nome
-        $phoneNumber = explode('@', $remoteJid)[0];
+        // Extrai telefone ou ID do Instagram/Messenger
+        $jidParts = explode('@', $remoteJid);
+        $phoneNumber = $jidParts[0];
+        
         if (empty($pushName)) $pushName = $phoneNumber;
         
-        // Em Evolution v2 a mensagem de fato e array: message.conversation, message.extendedTextMessage.text
+        // Extração robusta de texto (suporta WA, Instagram e Messenger)
         $messageContent = $this->extractTextFromEvolutionMessage($messageObject);
 
         if (empty($messageContent)) {
@@ -66,14 +74,14 @@ class EvolutionWebhookController extends Controller
             return response()->json(['status' => 'empty_or_unsupported']);
         }
 
-        // 1. Encontra ou cria o Contato usando o telefone da Evolution
+        // 1. Encontra ou cria o Contato
         $contact = Contact::firstOrCreate(
             ['phone' => $phoneNumber],
             ['name' => $pushName]
         );
 
-        // Atualiza nome do contato se não tinha nome
-        if ($contact->name === $phoneNumber && $pushName !== $phoneNumber) {
+        // Atualiza nome do contato se não tinha nome real
+        if (($contact->name === $phoneNumber || empty($contact->name)) && $pushName !== $phoneNumber) {
             $contact->update(['name' => $pushName]);
         }
 
@@ -84,11 +92,11 @@ class EvolutionWebhookController extends Controller
         );
         $isNewChat = !$conversation->exists;
         
-        // Se a conversa já existia mas estava fechada/resolvida, reabre ela como Nova Conversa
-        if ($conversation->exists && $conversation->status === 'closed') {
+        // Se a conversa já existia mas estava fechada/resolvida, reabre ela
+        if ($conversation->exists && ($conversation->status === 'closed' || $conversation->status === 'resolved')) {
             $conversation->status = 'open';
-            $conversation->assigned_to = null; // Tira do atendente antigo e joga na fila
-            $isNewChat = true; // Trata como novo chat para disparar Automação Mestra
+            $conversation->assigned_to = null;
+            $isNewChat = true;
         }
         
         $conversation->last_message_at = now();
@@ -120,9 +128,8 @@ class EvolutionWebhookController extends Controller
             'channel_id' => $channel->id,
         ]));
 
-        // 4. Inteligência Artificial: Responde se for nova mensagem DO CLIENTE e o ticket não tem humano
+        // 4. Inteligência Artificial: Responde se for nova mensagem DO CLIENTE e sem atendente
         if (!$fromMe && $conversation->status === 'open' && is_null($conversation->assigned_to)) {
-            Log::info("Despachando IA para responder a conversa {$conversation->id}");
             ProcessAiReplyJob::dispatch($conversation, $message);
         }
 
@@ -131,12 +138,22 @@ class EvolutionWebhookController extends Controller
 
     private function extractTextFromEvolutionMessage(array $msgContent)
     {
+        // Padrão WhatsApp
         if (isset($msgContent['conversation'])) {
             return $msgContent['conversation'];
         }
         if (isset($msgContent['extendedTextMessage']['text'])) {
             return $msgContent['extendedTextMessage']['text'];
         }
+        // Padrão Instagram / Messenger / Typeba
+        if (isset($msgContent['text'])) {
+            return $msgContent['text'];
+        }
+        // Fallback para conteúdo aninhado em sub-objetos comuns
+        if (isset($msgContent['message']['conversation'])) {
+            return $msgContent['message']['conversation'];
+        }
+        
         return '';
     }
 }
