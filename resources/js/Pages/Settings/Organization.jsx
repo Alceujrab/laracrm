@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
-import { Head, useForm, router } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import { 
     Users, ShieldAlert, GitMerge, Plus, Edit, Trash2, X, Check, Shield
 } from 'lucide-react';
 
-export default function Organization({ users, groups, roles, flash }) {
+export default function OrganizationTab({ users = [], groups = [], roles = [] }) {
     const [activeTab, setActiveTab] = useState('members'); // 'members' | 'groups'
     
     // Form do Membro
@@ -100,9 +99,7 @@ export default function Organization({ users, groups, roles, flash }) {
     };
 
     return (
-        <AuthenticatedLayout activeModule="settings">
-            <Head title="Controle de Equipes e Acessos" />
-
+        <div className="flex flex-col h-full overflow-y-auto bg-gray-50 dark:bg-gray-950">
             <div className="py-8">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     
@@ -384,6 +381,6 @@ export default function Organization({ users, groups, roles, flash }) {
                     </div>
                 </div>
             )}
-        </AuthenticatedLayout>
+        </div>
     );
 }

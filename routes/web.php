@@ -84,7 +84,16 @@ Route::middleware(['auth'])->group(function () {
     // --- ROTAS ADMINISTRATIVAS (Somente Admin) ---
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/settings', function () {
-            return Inertia::render('Settings/Index');
+            // Carrega dados necessários para todas as abas do painel de configurações
+            $users  = \App\Models\User::with(['roles', 'groups'])->get();
+            $groups = \App\Models\Group::all();
+            $roles  = \Spatie\Permission\Models\Role::all();
+
+            return \Inertia\Inertia::render('Settings/Index', [
+                'orgUsers'  => $users,
+                'orgGroups' => $groups,
+                'orgRoles'  => $roles,
+            ]);
         })->name('settings.index');
 
         // Organização (Membros, Cargos e Setores)

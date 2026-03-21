@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, usePage } from '@inertiajs/react';
@@ -10,11 +10,11 @@ import {
 import CreateDealModal from '@/Components/Deal/CreateDealModal';
 import NewConversationModal from '@/Components/Inbox/NewConversationModal';
 
-/* Macros pre-definidas */
-const MACROS = [
-    { title: 'Saudação Padrão', text: 'Olá! Como vai? Sou seu consultor da CF Auto. Como posso te auxiliar com seu novo veículo hoje?' },
-    { title: 'Localização', text: 'Nossa loja fica muito bem localizada! Venha tomar um café conosco e conhecer nosso estoque: [Link do Maps]' },
-    { title: 'Financiamento', text: 'Trabalhamos com todas as financeiras e garantimos as melhores taxas do mercado. Vamos fazer uma simulação sem compromisso?' }
+/* Emojis mais usados em atendimento */
+const EMOJI_LIST = [
+    '😀','😊','😁','😍','🥰','😎','🤩','👍','👏','🙏','❤️','🔥','✅','⭐','🎉','💬',
+    '😢','😅','🤔','😮','😴','🙄','😤','🤣','😂','🥳','💪','🤝','👋','✌️','🙌','💡',
+    '📌','📞','📧','📅','🏠','🏷️','💰','💲','🚗','🚀','⚡','🌟','🎯','📝','💼','🔔'
 ];
 
 const Accordion = ({ title, icon: Icon, defaultOpen = false, children }) => {
@@ -53,6 +53,9 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     const [isNewConvOpen, setIsNewConvOpen] = useState(false);
     const [isCatalogOpen, setIsCatalogOpen] = useState(false);
     const [isMacroOpen, setIsMacroOpen] = useState(false);
+    const [isEmojiOpen, setIsEmojiOpen] = useState(false);
+    const [quickReplies, setQuickReplies] = useState([]);
+    const [qrSearch, setQrSearch] = useState('');
     const [vehicleSearch, setVehicleSearch] = useState('');
 
     // Recording State
@@ -74,6 +77,9 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                 axios.get('/api/inbox/refresh').then(({ data }) => setConversations(data));
             }
         });
+
+        // Carregar frases rápidas da API
+        axios.get('/api/quick-replies').then(({ data }) => setQuickReplies(data)).catch(() => {});
 
         // Ouvinte Privado do Vigia de Ociosidade (Alarme de Lentidão)
         if (auth?.user?.id) {
@@ -428,9 +434,15 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                     >
                                         <div className="flex items-start">
                                             <div className="relative">
-                                                <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 font-bold">
-                                                    {getInitials(contact?.name)}
-                                                </div>
+                                                <img
+                                                    src={
+                                                        contact?.photo_url ||
+                                                        `https://ui-avatars.com/api/?name=${encodeURIComponent(contact?.name || 'C')}&background=6366f1&color=fff&size=80`
+                                                    }
+                                                    alt={contact?.name}
+                                                    className="w-10 h-10 rounded-full object-cover bg-indigo-100"
+                                                    onError={e => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(contact?.name||'C')}&background=6366f1&color=fff&size=80`; }}
+                                                />
                                                 {chat.channel?.type === 'whatsapp' && (
                                                     <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-gray-900 rounded-full"></span>
                                                 )}
@@ -722,9 +734,36 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                     />
                                 </div>
                                 <div className="flex items-center justify-between mt-2 px-1">
-                                    <div className="flex items-center space-x-1">
-                                        <button type="button" onClick={() => { setIsMacroOpen(!isMacroOpen); setIsCatalogOpen(false); }} className={`p-2 rounded-full transition-colors ${isMacroOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Respostas Rápidas"><List className="w-5 h-5" /></button>
-                                        <button type="button" onClick={() => { setIsCatalogOpen(!isCatalogOpen); setIsMacroOpen(false); }} className={`p-2 rounded-full transition-colors ${isCatalogOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Catálogo de Veículos"><Car className="w-5 h-5" /></button>
+                                    <div className="flex items-center space-x-1 relative">
+                                         {/* Emoji Picker */}
+                                         <button type="button" onClick={() => { setIsEmojiOpen(v => !v); setIsMacroOpen(false); setIsCatalogOpen(false); }} className="p-2 rounded-full text-base hover:bg-yellow-50 transition-colors" title="Emojis">😊</button>
+                                         {isEmojiOpen && (
+                                             <div className="absolute bottom-10 left-0 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-2 w-60">
+                                                 <div className="grid grid-cols-8 gap-0.5">
+                                                     {EMOJI_LIST.map((em, idx) => (
+                                                         <button key={idx} type="button" onClick={() => { setNewMessage(m => m + em); setIsEmojiOpen(false); }} className="text-base hover:bg-gray-100 dark:hover:bg-gray-700 rounded p-0.5">{em}</button>
+                                                     ))}
+                                                 </div>
+                                             </div>
+                                         )}
+                                         {/* Frases Rápidas */}
+                                         <button type="button" onClick={() => { setIsMacroOpen(v => !v); setIsCatalogOpen(false); setIsEmojiOpen(false); }} className={`p-2 rounded-full transition-colors ${isMacroOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Frases Rápidas"><List className="w-5 h-5" /></button>
+                                         {isMacroOpen && (
+                                             <div className="absolute bottom-10 left-10 z-50 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl shadow-2xl p-3 w-80">
+                                                 <p className="text-xs font-semibold text-gray-400 uppercase mb-2">Frases Rápidas</p>
+                                                 <input autoFocus type="text" placeholder="Buscar frase..." className="w-full text-sm border border-gray-200 dark:border-gray-700 rounded-lg px-3 py-1.5 mb-2 dark:bg-gray-900 dark:text-white" value={qrSearch} onChange={e => setQrSearch(e.target.value)} />
+                                                 <div className="max-h-52 overflow-y-auto space-y-1">
+                                                     {quickReplies.filter(r => r.title.toLowerCase().includes(qrSearch.toLowerCase()) || r.content.toLowerCase().includes(qrSearch.toLowerCase())).map(r => (
+                                                         <button key={r.id} type="button" onClick={() => { setNewMessage(r.content); setIsMacroOpen(false); setQrSearch(""); }} className="w-full text-left px-3 py-2 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors">
+                                                             <p className="text-xs font-bold text-indigo-600 dark:text-indigo-400">/{r.title}</p>
+                                                             <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.content}</p>
+                                                         </button>
+                                                     ))}
+                                                     {quickReplies.length === 0 && <p className="text-xs text-gray-400 text-center py-3">Cadastre em Configura\xC3\xA7\xC3\xB5es \xE2\x86\x92 Frases Rápidas</p>}
+                                                 </div>
+                                             </div>
+                                         )}
+                                         <button type="button" onClick={() => { setIsCatalogOpen(v => !v); setIsMacroOpen(false); setIsEmojiOpen(false); }} className={`p-2 rounded-full transition-colors ${isCatalogOpen ? 'text-indigo-600 bg-indigo-50' : 'text-gray-500 hover:text-indigo-600'}`} title="Catálogo de Veículos"><Car className="w-5 h-5" /></button>
                                         <span className="w-px h-5 bg-gray-300 mx-2"></span>
                                         <button type="button" onClick={startRecording} className="p-2 text-gray-500 hover:text-red-600 dark:hover:text-red-400 rounded-full transition-colors"><Mic className="w-5 h-5" /></button>
                                         <button type="button" onClick={() => fileInputRef.current.click()} className="p-2 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-full transition-colors"><Paperclip className="w-5 h-5" /></button>
@@ -761,8 +800,13 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                 {isContactPanelOpen && activeConv && (
                     <div className="w-80 border-l border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex flex-col flex-shrink-0 z-20">
                         <div className="p-6 border-b border-gray-200 dark:border-gray-800 flex flex-col items-center bg-gray-50/50 dark:bg-gray-900">
-                            <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 text-3xl font-bold mb-4 shadow-sm ring-4 ring-white dark:ring-gray-800">
-                                {getInitials(activeConv.contact?.name)}
+                            <div className="w-20 h-20 rounded-full bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center text-indigo-700 dark:text-indigo-300 text-3xl font-bold mb-4 shadow-sm ring-4 ring-white dark:ring-gray-800 overflow-hidden">
+                                <img
+                                    src={activeConv.contact?.photo_url || `https://ui-avatars.com/api/?name=${encodeURIComponent(activeConv.contact?.name||'C')}&background=6366f1&color=fff&size=160`}
+                                    alt={activeConv.contact?.name}
+                                    className="w-full h-full object-cover"
+                                    onError={e => { e.target.onerror = null; e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(activeConv.contact?.name||'C')}&background=6366f1&color=fff&size=160`; }}
+                                />
                             </div>
                             <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-1">{activeConv.contact?.name || 'Desconhecido'}</h3>
                             <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">{activeConv.contact?.phone || 'Sem número'}</p>

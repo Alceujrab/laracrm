@@ -12,8 +12,9 @@ import AutomationsSettings from './Automations';
 import ProfileTab from './Profile';
 import CustomFieldsTab from './CustomFields';
 import QuickRepliesTab from './QuickReplies';
+import OrganizationTab from './Organization';
 
-export default function SettingsIndex() {
+export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles = [] }) {
     const { user } = usePage().props.auth;
     const [activeTab, setActiveTab] = useState('canais');
 
@@ -21,7 +22,7 @@ export default function SettingsIndex() {
     const settingsMenu = [
         { label: 'Perfil Mestre', icon: User, active: activeTab === 'perfil', id: 'perfil' },
         { label: 'Geral', icon: SettingsIcon, active: activeTab === 'geral', id: 'geral' },
-        { label: 'Organização (Acessos)', icon: Shield, active: false, id: 'org', onClick: () => router.visit('/settings/organization') },
+        { label: 'Organização (Acessos)', icon: Shield, active: activeTab === 'org', id: 'org' },
         { label: 'Canais', icon: Share2, active: activeTab === 'canais', id: 'canais' },
         { label: 'Campos Customizados', icon: TextCursorInput, active: activeTab === 'campos', id: 'campos' },
         { label: 'Frases Rápidas', icon: MessageSquareQuote, active: activeTab === 'frases', id: 'frases' },
@@ -444,6 +445,7 @@ export default function SettingsIndex() {
             {activeTab === 'bots' && renderBotBuilderMockup()}
             {activeTab === 'perfil' && <ProfileTab user={user} />}
             {activeTab === 'geral' && renderPlaceholder('Configurações Gerais', 'Upload da Logo, Fuso Horário, e Moeda Oficial do ambiente.')}
+            {activeTab === 'org' && <OrganizationTab users={orgUsers} groups={orgGroups} roles={orgRoles} />}
             {activeTab === 'membros' && renderPlaceholder('Gerenciamento de Equipe', 'Tabela de agentes e botão Cadastrar Operador.')}
             {activeTab === 'permissoes' && renderPlaceholder('Permissões RBAC', 'Toggles lógicos sobre restrições de Caixa de Entrada e Negócios.')}
             {activeTab === 'grupos' && renderPlaceholder('Grupos de Departamentos', 'Vendas / Suporte / Onboarding para roteamento.')}
