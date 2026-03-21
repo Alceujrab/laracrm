@@ -759,7 +759,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                                                              <p className="text-xs text-gray-500 dark:text-gray-400 truncate">{r.content}</p>
                                                          </button>
                                                      ))}
-                                                     {quickReplies.length === 0 && <p className="text-xs text-gray-400 text-center py-3">Cadastre em Configura\xC3\xA7\xC3\xB5es \xE2\x86\x92 Frases Rápidas</p>}
+                                                     {quickReplies.length === 0 && <p className="text-xs text-gray-400 text-center py-3">Cadastre em Configurações → Frases Rápidas</p>}
                                                  </div>
                                              </div>
                                          )}
