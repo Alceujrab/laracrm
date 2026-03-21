@@ -15,6 +15,7 @@ import QuickRepliesTab from './QuickReplies';
 import OrganizationTab from './Organization';
 import GeneralTab from './General';
 import KnowledgeTab from './Knowledge';
+import BotFlows from './BotFlows';
 
 export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles = [], knowledgeItems = [] }) {
     const { auth, flash } = usePage().props;
@@ -378,56 +379,6 @@ export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles 
         </div>
     );
 
-    const renderBotBuilderMockup = () => (
-        <div className="flex flex-col h-full bg-gray-100 dark:bg-gray-950">
-            <div className="px-8 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex justify-between items-center z-10 shadow-sm relative">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Editor de Fluxo (Bot)</h1>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Node-based builder (React Flow Canvas Mockup).</p>
-                </div>
-                <button className="flex items-center px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm font-medium transition-colors shadow-sm">
-                    Salvar e Publicar
-                </button>
-            </div>
-            {/* Canvas Area Mockup */}
-            <div className="flex-1 relative overflow-hidden flex items-center justify-center p-8 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] dark:bg-[radial-gradient(#1f2937_1px,transparent_1px)] [background-size:16px_16px]">
-                {/* Nodes Mock */}
-                <div className="absolute top-20 left-40 bg-white dark:bg-gray-800 border-l-4 border-indigo-500 p-4 rounded shadow-lg w-64 z-10 border dark:border-gray-700">
-                    <h4 className="font-bold text-sm mb-2 text-gray-800 dark:text-gray-200">Gatilho: Início</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Qualquer mensagem nova.</p>
-                </div>
-
-                <div className="absolute top-48 left-96 bg-white dark:bg-gray-800 border-l-4 border-green-500 p-4 rounded shadow-lg w-64 z-10 border dark:border-gray-700">
-                    <h4 className="font-bold text-sm mb-2 text-gray-800 dark:text-gray-200">Enviar Mensagem</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">"Olá! Escolha uma opção..."</p>
-                </div>
-
-                {/* SVG connection lines mock */}
-                <svg className="absolute inset-0 pointer-events-none w-full h-full z-0">
-                    <path d="M 400 120 C 450 120, 420 230, 480 230" fill="none" stroke="#6366F1" strokeWidth="2" strokeDasharray="5,5" />
-                </svg>
-
-                {/* Toolbox */}
-                <div className="absolute right-8 top-8 bottom-8 w-64 bg-white dark:bg-gray-900 rounded-xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden flex flex-col z-20">
-                    <div className="p-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50">
-                        <h3 className="font-bold text-gray-800 dark:text-white text-sm">Paleta de Nós</h3>
-                    </div>
-                    <div className="p-4 space-y-3 flex-1 overflow-y-auto">
-                        <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded cursor-grab flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                            <MessageSquareQuote className="w-4 h-4 mr-2 text-blue-500" /> Mensagem
-                        </div>
-                        <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded cursor-grab flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                            <Share2 className="w-4 h-4 mr-2 text-purple-500" /> Ramificação
-                        </div>
-                        <div className="p-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded cursor-grab flex items-center text-sm font-medium text-gray-700 dark:text-gray-300">
-                            <Zap className="w-4 h-4 mr-2 text-yellow-500" /> Requisição HTTP
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-
     const renderPlaceholder = (title, desc) => (
         <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-gray-50 dark:bg-gray-950">
             <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-2">{title}</h2>
@@ -447,7 +398,7 @@ export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles 
 
             {activeTab === 'canais' && renderCanais()}
             {activeTab === 'treinamento' && <KnowledgeTab knowledgeItems={knowledgeItems} />}
-            {activeTab === 'bots' && renderBotBuilderMockup()}
+            {activeTab === 'bots' && <BotFlows />}
             {activeTab === 'perfil' && <ProfileTab user={user} />}
             {activeTab === 'geral' && <GeneralTab />}
             {activeTab === 'org' && <OrganizationTab users={orgUsers} groups={orgGroups} roles={orgRoles} flash={flash} />}
