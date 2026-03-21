@@ -938,15 +938,17 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                 }}
             />
 
-            <CreateProposalModal 
-                isOpen={isProposalModalOpen} 
-                onClose={() => setIsProposalModalOpen(false)}
-                conversation={selectedConversation}
-                onSuccess={(proposal) => {
-                    // Abrir o PDF em nova aba ao criar
-                    window.open(`/proposals/${proposal.id}/download`, '_blank');
-                }}
-            />
+            {activeConv && (
+                <CreateProposalModal 
+                    isOpen={isProposalModalOpen} 
+                    onClose={() => setIsProposalModalOpen(false)}
+                    conversation={activeConv}
+                    onSuccess={(proposal) => {
+                        // Abrir o PDF em nova aba ao criar
+                        window.open(`/proposals/${proposal.id}/download`, '_blank');
+                    }}
+                />
+            )}
         </AuthenticatedLayout>
     );
 }
