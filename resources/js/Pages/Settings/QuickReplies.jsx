@@ -10,16 +10,25 @@ export default function QuickRepliesTab() {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingId,   setEditingId]   = useState(null);
     const [loading,     setLoading]     = useState(false);
+    const [fetching,    setFetching]    = useState(true);
+    const [apiError,    setApiError]    = useState(null);
     const emptyForm = { title: '', content: '', category: '', is_global: false };
     const [form, setForm] = useState(emptyForm);
 
     useEffect(() => { fetchReplies(); }, []);
 
     const fetchReplies = async () => {
+        setFetching(true);
+        setApiError(null);
         try {
             const { data } = await axios.get('/api/quick-replies');
-            setReplies(data);
-        } catch (e) { console.error(e); }
+            setReplies(Array.isArray(data) ? data : []);
+        } catch (e) {
+            console.error(e);
+            setApiError(e.response?.data?.message || e.message || 'Erro ao carregar frases rápidas. Verifique se as migrações foram executadas no servidor.');
+        } finally {
+            setFetching(false);
+        }
     };
 
     const openCreate = () => { setEditingId(null); setForm(emptyForm); setIsModalOpen(true); };
@@ -82,7 +91,19 @@ export default function QuickRepliesTab() {
 
             {/* List */}
             <div className="flex-1 overflow-y-auto p-8 pt-4 space-y-6">
-                {Object.keys(grouped).length === 0 ? (
+                {fetching ? (
+                    <div className="flex items-center justify-center py-20">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                        <span className="ml-3 text-gray-500 text-sm">Carregando frases...</span>
+                    </div>
+                ) : apiError ? (
+                    <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
+                        <p className="text-red-700 dark:text-red-400 font-medium text-sm">⚠️ Erro ao carregar frases rápidas</p>
+                        <p className="text-red-500 dark:text-red-500 text-xs mt-2">{apiError}</p>
+                        <p className="text-gray-500 text-xs mt-3">Execute no servidor: <code className="font-mono bg-gray-100 px-1 rounded">git pull && php artisan migrate</code></p>
+                        <button onClick={fetchReplies} className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700">Tentar novamente</button>
+                    </div>
+                ) : Object.keys(grouped).length === 0 ? (
                     <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-xl border-2 border-dashed border-gray-200 dark:border-gray-700">
                         <MessageSquareQuote className="w-10 h-10 mx-auto text-gray-300 mb-3" />
                         <h3 className="font-semibold text-gray-900 dark:text-white">Nenhuma frase cadastrada</h3>
