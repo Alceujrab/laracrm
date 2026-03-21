@@ -8,6 +8,8 @@ use App\Models\Deal;
 use App\Models\DealStage;
 use App\Models\Contact;
 use App\Models\Conversation;
+use App\Models\Message;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
 
@@ -15,74 +17,89 @@ class ReportController extends Controller
 {
     public function index()
     {
-        // 1. KPI Cards
+        // 1. KPI Cards — Negócios
         $activeDealsCount = Deal::where('status', 'open')->count();
-        $totalDealsValue = Deal::where('status', 'open')->sum('value');
-        $conversionRate = 0;
-        $wonCount = Deal::where('status', 'won')->count();
-        $totalEnded = Deal::whereIn('status', ['won', 'lost'])->count();
-        if ($totalEnded > 0) {
-            $conversionRate = round(($wonCount / $totalEnded) * 100, 1);
-        }
-        
+        $totalDealsValue  = Deal::where('status', 'open')->sum('value');
+        $wonCount         = Deal::where('status', 'won')->count();
+        $totalEnded       = Deal::whereIn('status', ['won', 'lost'])->count();
+        $conversionRate   = $totalEnded > 0 ? round(($wonCount / $totalEnded) * 100, 1) : 0;
         $newLeadsThisWeek = Contact::where('created_at', '>=', Carbon::now()->startOfWeek())->count();
 
+        // 2. KPI Cards — Atendimento
+        $openConversations     = Conversation::where('status', 'open')->count();
+        $resolvedToday         = Conversation::where('status', 'resolved')
+                                    ->whereDate('updated_at', today())->count();
+        $totalConversationsWeek = Conversation::where('created_at', '>=', Carbon::now()->startOfWeek())->count();
+
         $kpiCards = [
-            ['title' => 'Negociações Ativas', 'value' => $activeDealsCount, 'trend' => '+5%', 'trendUp' => true],
-            ['title' => 'Volume em Pipeline', 'value' => 'R$ ' . number_format($totalDealsValue, 0, ',', '.'), 'trend' => '+12%', 'trendUp' => true],
-            ['title' => 'Taxa de Conversão', 'value' => $conversionRate . '%', 'trend' => '+2%', 'trendUp' => true],
-            ['title' => 'Novos Leads (Semana)', 'value' => $newLeadsThisWeek, 'trend' => '+18%', 'trendUp' => true],
+            ['title' => 'Negociações Ativas',    'value' => $activeDealsCount, 'trend' => '+5%',  'trendUp' => true,  'icon' => 'briefcase'],
+            ['title' => 'Volume em Pipeline',     'value' => 'R$ ' . number_format($totalDealsValue, 0, ',', '.'), 'trend' => '+12%', 'trendUp' => true, 'icon' => 'trending-up'],
+            ['title' => 'Taxa de Conversão',      'value' => $conversionRate . '%', 'trend' => $conversionRate > 0 ? '+' . $conversionRate . '%' : '0%', 'trendUp' => $conversionRate > 0, 'icon' => 'percent'],
+            ['title' => 'Novos Leads (Semana)',   'value' => $newLeadsThisWeek,  'trend' => '+18%', 'trendUp' => true, 'icon' => 'users'],
+            ['title' => 'Conversas Abertas',      'value' => $openConversations,  'trend' => '',     'trendUp' => null, 'icon' => 'message-circle'],
+            ['title' => 'Resolvidas Hoje',        'value' => $resolvedToday,      'trend' => '',     'trendUp' => null, 'icon' => 'check-circle'],
+            ['title' => 'Atendimentos (Semana)',  'value' => $totalConversationsWeek, 'trend' => '', 'trendUp' => null, 'icon' => 'inbox'],
+            ['title' => 'Negócios Ganhos',        'value' => $wonCount,           'trend' => '',     'trendUp' => null, 'icon' => 'trophy'],
         ];
 
-        // 2. Timeline Data (Last 7 days of deals)
+        // 3. Timeline Data — Last 14 days: deals + conversations per day
         $timelineData = [];
-        for ($i = 6; $i >= 0; $i--) {
-            $date = Carbon::now()->subDays($i);
+        for ($i = 13; $i >= 0; $i--) {
+            $date    = Carbon::now()->subDays($i);
             $dayName = $date->format('d/m');
-            
-            $count = Deal::whereDate('created_at', $date->toDateString())->count();
-            
+
+            $dealsCount         = Deal::whereDate('created_at', $date->toDateString())->count();
+            $conversationsCount = Conversation::whereDate('created_at', $date->toDateString())->count();
+            $resolvedCount      = Conversation::where('status', 'resolved')
+                                      ->whereDate('updated_at', $date->toDateString())->count();
+
             $timelineData[] = [
-                'time' => $dayName,
-                'deals' => $count,
-                // Mocking social breakdown for the chart complexity
-                'whatsapp' => round($count * 0.6),
-                'instagram' => round($count * 0.3),
-                'facebook' => round($count * 0.1),
+                'time'          => $dayName,
+                'deals'         => $dealsCount,
+                'conversas'     => $conversationsCount,
+                'resolvidas'    => $resolvedCount,
             ];
         }
 
-        // 3. Pie Data (Deals by Stage)
-        $stages = DealStage::withCount('deals')->get();
-        $pieData = $stages->map(function($stage) {
-            $colors = [
-                'Prospecção' => '#6366F1',
-                'Qualificação' => '#A855F7',
-                'Proposta' => '#F59E0B',
-                'Negociação' => '#10B981',
-                'Fechamento' => '#3B82F6'
-            ];
+        // 4. Pie/Donut — Deals by Stage
+        $stages  = DealStage::withCount('deals')->orderBy('order')->get();
+        $colors  = ['#6366F1', '#A855F7', '#F59E0B', '#10B981', '#3B82F6', '#EC4899', '#14B8A6', '#F97316'];
+        $pieData = $stages->values()->map(function ($stage, $idx) use ($colors) {
             return [
-                'name' => $stage->name,
+                'name'  => $stage->name,
                 'value' => $stage->deals_count,
-                'color' => $colors[$stage->name] ?? '#94A3B8'
+                'color' => $colors[$idx % count($colors)],
             ];
         })->toArray();
 
-        // 4. Funnel Data (Value by Stage)
-        $funnelData = $stages->map(function($stage) {
+        // 5. Funnel Data — Value by Stage
+        $funnelData = $stages->map(function ($stage) {
             return [
                 'stage' => $stage->name,
-                'value' => Deal::where('deal_stage_id', $stage->id)->sum('value')
+                'value' => (float) Deal::where('deal_stage_id', $stage->id)->sum('value'),
+                'count' => Deal::where('deal_stage_id', $stage->id)->count(),
             ];
-        });
+        })->toArray();
+
+        // 6. Operator leaderboard — resolved conversations last 30 days
+        $operatorStats = User::select('users.id', 'users.name')
+            ->join('conversations', 'conversations.assigned_to', '=', 'users.id')
+            ->where('conversations.status', 'resolved')
+            ->where('conversations.updated_at', '>=', Carbon::now()->subDays(30))
+            ->selectRaw('users.id, users.name, COUNT(conversations.id) as resolved_count')
+            ->groupBy('users.id', 'users.name')
+            ->orderByDesc('resolved_count')
+            ->limit(10)
+            ->get()
+            ->toArray();
 
         return Inertia::render('Reports/Index', [
             'stats' => [
-                'kpiCards' => $kpiCards,
-                'timelineData' => $timelineData,
-                'pieData' => $pieData,
-                'funnelData' => $funnelData
+                'kpiCards'      => $kpiCards,
+                'timelineData'  => $timelineData,
+                'pieData'       => $pieData,
+                'funnelData'    => $funnelData,
+                'operatorStats' => $operatorStats,
             ]
         ]);
     }

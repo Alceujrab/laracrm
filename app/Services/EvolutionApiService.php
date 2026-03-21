@@ -135,31 +135,6 @@ class EvolutionApiService
             return null;
         }
     }
-
-    /**
-     * Enviar mídia passando uma URL pública (ao invés de base64).
-     * A Evolution API (v2+) suporta o campo `mediaUrl` para buscar o arquivo diretamente.
-     */
-    public function sendMediaUrl(string $apiUrl, string $apiKey, string $instanceName, string $number, string $mediaUrl, string $mediaType, string $fileName = '', string $caption = '')
-    {
-        $endpoint = rtrim($apiUrl, '/') . "/message/sendMedia/{$instanceName}";
-        
-        try {
-            $response = Http::withHeaders($this->getHeaders($apiKey))->post($endpoint, [
-                'number'    => $number,
-                'mediatype' => $mediaType,
-                'media'     => $mediaUrl,   // Evolution v2 accepts a URL in the media field
-                'fileName'  => $fileName,
-                'caption'   => $caption,
-                'delay'     => 1200,
-            ]);
-
-            return $response->json();
-        } catch (\Exception $e) {
-            Log::error("Evolution API Send MediaUrl Exception: " . $e->getMessage());
-            return null;
-        }
-    }
     
     public function sendAudio(string $apiUrl, string $apiKey, string $instanceName, string $number, string $base64)
     {
