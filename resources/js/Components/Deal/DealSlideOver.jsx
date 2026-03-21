@@ -1,23 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
-import { X, User, Car, Calendar, DollarSign, CheckSquare, MessageSquare, Loader2, Tag } from 'lucide-react';
+import { router } from '@inertiajs/react';
+import { X, User, Car, Calendar, DollarSign, CheckSquare, MessageSquare, Loader2, Tag, Trophy, XCircle, RotateCcw } from 'lucide-react';
 
 export default function DealSlideOver({ isOpen, onClose, dealId }) {
     const [deal, setDeal] = useState(null);
     const [loading, setLoading] = useState(false);
-    const [activeTab, setActiveTab] = useState('resumo'); // resumo, tarefas, historico
+    const [activeTab, setActiveTab] = useState('resumo');
     const [isAddingTask, setIsAddingTask] = useState(false);
     const [newTaskTitle, setNewTaskTitle] = useState('');
     const [newTaskDueDate, setNewTaskDueDate] = useState('');
-    const [actionLoading, setActionLoading] = useState(null); // stores taskId being toggled/deleted
+    const [actionLoading, setActionLoading] = useState(null);
+    const [statusLoading, setStatusLoading] = useState(false);
 
     useEffect(() => {
         if (isOpen && dealId) {
             setLoading(true);
             axios.get(route('api.crm.deals.show', { deal: dealId }))
-                .then(response => {
-                    setDeal(response.data);
-                })
+                .then(response => setDeal(response.data))
                 .catch(error => console.error("Error fetching deal details:", error))
                 .finally(() => setLoading(false));
         }
@@ -26,19 +26,12 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
     const handleAddTask = async (e) => {
         e.preventDefault();
         if (!newTaskTitle.trim()) return;
-
         try {
             const response = await axios.post(route('api.tasks.store', { deal: dealId }), {
                 title: newTaskTitle,
                 due_date: newTaskDueDate || null
             });
-            
-            // Update local state
-            setDeal(prev => ({
-                ...prev,
-                tasks: [response.data, ...(prev.tasks || [])]
-            }));
-            
+            setDeal(prev => ({ ...prev, tasks: [response.data, ...(prev.tasks || [])] }));
             setNewTaskTitle('');
             setNewTaskDueDate('');
             setIsAddingTask(false);
@@ -51,10 +44,7 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
         setActionLoading(taskId);
         try {
             const response = await axios.put(route('api.tasks.toggle', { task: taskId }));
-            setDeal(prev => ({
-                ...prev,
-                tasks: prev.tasks.map(t => t.id === taskId ? response.data : t)
-            }));
+            setDeal(prev => ({ ...prev, tasks: prev.tasks.map(t => t.id === taskId ? response.data : t) }));
         } catch (error) {
             console.error("Error toggling task:", error);
         } finally {
@@ -64,14 +54,10 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
 
     const handleDeleteTask = async (taskId) => {
         if (!confirm('Excluir esta tarefa?')) return;
-        
         setActionLoading(taskId);
         try {
             await axios.delete(route('api.tasks.destroy', { task: taskId }));
-            setDeal(prev => ({
-                ...prev,
-                tasks: prev.tasks.filter(t => t.id !== taskId)
-            }));
+            setDeal(prev => ({ ...prev, tasks: prev.tasks.filter(t => t.id !== taskId) }));
         } catch (error) {
             console.error("Error deleting task:", error);
         } finally {
@@ -79,27 +65,40 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
         }
     };
 
-    const formatCurrency = (value) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+    const handleUpdateStatus = (newStatus) => {
+        if (!deal) return;
+        setStatusLoading(true);
+        router.patch(route('crm.deals.status', { deal: deal.id }), { status: newStatus }, {
+            preserveScroll: true,
+            onSuccess: () => {
+                setDeal(prev => ({ ...prev, status: newStatus }));
+                setStatusLoading(false);
+                if (newStatus !== 'open') onClose();
+            },
+            onError: () => setStatusLoading(false),
+        });
     };
+
+    const formatCurrency = (value) =>
+        new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
     if (!isOpen) return null;
 
     return (
         <div className="fixed inset-0 z-50 overflow-hidden">
             {/* Backdrop */}
-            <div 
+            <div
                 className="absolute inset-0 bg-gray-900 bg-opacity-50 transition-opacity backdrop-blur-sm"
                 onClick={onClose}
-            ></div>
+            />
 
             {/* Slide-over panel */}
             <div className="fixed inset-y-0 right-0 flex max-w-full pl-10">
                 <div className="w-screen max-w-md transform transition ease-in-out duration-300 sm:duration-500">
                     <div className="flex h-full flex-col bg-white dark:bg-gray-900 shadow-2xl">
-                        
+
                         {/* Header */}
-                        <div className="px-6 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/80">
+                        <div className="px-6 py-6 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/80 flex-shrink-0">
                             <div className="flex items-start justify-between">
                                 <h2 className="text-xl font-bold text-gray-900 dark:text-white">
                                     {loading ? 'Carregando...' : (deal?.vehicle ? `${deal.vehicle.make} ${deal.vehicle.model}` : deal?.title || 'Detalhes da Negociação')}
@@ -111,7 +110,7 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                     <X className="h-5 w-5" />
                                 </button>
                             </div>
-                            
+
                             {!loading && deal && (
                                 <div className="mt-4 flex items-center space-x-3">
                                     <span className="inline-flex items-center rounded-md bg-indigo-50 px-2 py-1 text-xs font-medium text-indigo-700 ring-1 ring-inset ring-indigo-700/10">
@@ -129,15 +128,15 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                         </div>
 
                         {/* Tabs */}
-                        <div className="border-b border-gray-200 dark:border-gray-800 px-6">
+                        <div className="border-b border-gray-200 dark:border-gray-800 px-6 flex-shrink-0">
                             <nav className="-mb-px flex space-x-6">
                                 {['resumo', 'tarefas', 'historico'].map((tab) => (
                                     <button
                                         key={tab}
                                         onClick={() => setActiveTab(tab)}
                                         className={`whitespace-nowrap px-1 py-4 border-b-2 font-medium text-sm capitalize ${
-                                            activeTab === tab 
-                                                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400' 
+                                            activeTab === tab
+                                                ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
                                                 : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300'
                                         }`}
                                     >
@@ -147,7 +146,7 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                             </nav>
                         </div>
 
-                        {/* Content */}
+                        {/* Scrollable Content */}
                         <div className="relative flex-1 overflow-y-auto px-6 py-6">
                             {loading ? (
                                 <div className="flex justify-center items-center h-full">
@@ -157,7 +156,6 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                 <>
                                     {activeTab === 'resumo' && (
                                         <div className="space-y-8">
-                                            {/* Valor */}
                                             <div>
                                                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Dados Financeiros</h3>
                                                 <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 flex items-center justify-between border border-gray-100 dark:border-gray-700">
@@ -169,7 +167,6 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                                 </div>
                                             </div>
 
-                                            {/* Contato */}
                                             {deal.contact && (
                                                 <div>
                                                     <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Cliente / Contato</h3>
@@ -188,7 +185,6 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                                 </div>
                                             )}
 
-                                            {/* Veículo */}
                                             {deal.vehicle && (
                                                 <div>
                                                     <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Veículo de Interesse</h3>
@@ -200,13 +196,12 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                                         <div className="pl-8 flex space-x-3 text-xs text-gray-500 dark:text-gray-400">
                                                             <span className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{deal.vehicle.year}</span>
                                                             <span className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{deal.vehicle.mileage} km</span>
-                                                            <span className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{deal.vehicle.condition === 'new' ? '0km' : 'Seminovos'}</span>
+                                                            <span className="bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded">{deal.vehicle.condition === 'new' ? '0km' : 'Seminovo'}</span>
                                                         </div>
                                                     </div>
                                                 </div>
                                             )}
 
-                                            {/* Meta */}
                                             <div>
                                                 <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">Informações do Sistema</h3>
                                                 <ul className="text-sm space-y-2 text-gray-600 dark:text-gray-400">
@@ -221,7 +216,7 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                     {activeTab === 'tarefas' && (
                                         <div className="space-y-4">
                                             {!isAddingTask ? (
-                                                <button 
+                                                <button
                                                     onClick={() => setIsAddingTask(true)}
                                                     className="w-full flex items-center justify-center px-4 py-2 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-sm font-medium text-indigo-600 dark:text-indigo-400 hover:border-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 transition-colors"
                                                 >
@@ -230,29 +225,23 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                                 </button>
                                             ) : (
                                                 <form onSubmit={handleAddTask} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-indigo-100 dark:border-indigo-900/30 space-y-3">
-                                                    <input 
+                                                    <input
                                                         autoFocus
-                                                        type="text" 
+                                                        type="text"
                                                         placeholder="O que precisa ser feito?"
                                                         value={newTaskTitle}
                                                         onChange={(e) => setNewTaskTitle(e.target.value)}
                                                         className="w-full bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 rounded-md text-sm focus:ring-indigo-500"
                                                     />
                                                     <div className="flex space-x-2">
-                                                        <input 
+                                                        <input
                                                             type="date"
                                                             value={newTaskDueDate}
                                                             onChange={(e) => setNewTaskDueDate(e.target.value)}
                                                             className="flex-1 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 rounded-md text-xs focus:ring-indigo-500"
                                                         />
                                                         <button type="submit" className="px-3 py-1 bg-indigo-600 text-white rounded-md text-sm font-medium hover:bg-indigo-700">Salvar</button>
-                                                        <button 
-                                                            type="button" 
-                                                            onClick={() => setIsAddingTask(false)}
-                                                            className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium"
-                                                        >
-                                                            Cancelar
-                                                        </button>
+                                                        <button type="button" onClick={() => setIsAddingTask(false)} className="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 rounded-md text-sm font-medium">Cancelar</button>
                                                     </div>
                                                 </form>
                                             )}
@@ -261,10 +250,10 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                                 <div className="space-y-3 mt-4">
                                                     {deal.tasks.map(task => (
                                                         <div key={task.id} className="flex items-start group bg-white dark:bg-gray-800 p-3 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-indigo-200 transition-colors">
-                                                            <input 
-                                                                type="checkbox" 
-                                                                className="mt-1 flex-shrink-0 w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer" 
-                                                                checked={task.is_completed} 
+                                                            <input
+                                                                type="checkbox"
+                                                                className="mt-1 flex-shrink-0 w-4 h-4 text-indigo-600 rounded border-gray-300 focus:ring-indigo-500 cursor-pointer"
+                                                                checked={task.is_completed}
                                                                 onChange={() => handleToggleTask(task.id)}
                                                                 disabled={actionLoading === task.id}
                                                             />
@@ -272,10 +261,7 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                                                 <p className={`text-sm font-medium truncate ${task.is_completed ? 'line-through text-gray-400' : 'text-gray-900 dark:text-white'}`}>{task.title}</p>
                                                                 {task.due_date && <p className="text-xs text-gray-500 mt-1 flex items-center"><Calendar className="w-3 h-3 mr-1" /> {new Date(task.due_date).toLocaleDateString()}</p>}
                                                             </div>
-                                                            <button 
-                                                                onClick={() => handleDeleteTask(task.id)}
-                                                                className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all"
-                                                            >
+                                                            <button onClick={() => handleDeleteTask(task.id)} className="opacity-0 group-hover:opacity-100 p-1 text-gray-400 hover:text-red-500 transition-all">
                                                                 <X className="w-4 h-4" />
                                                             </button>
                                                         </div>
@@ -311,6 +297,49 @@ export default function DealSlideOver({ isOpen, onClose, dealId }) {
                                 <div className="text-center text-gray-500 py-10">Negociação não encontrada.</div>
                             )}
                         </div>
+
+                        {/* Action Footer — fixed at bottom of the flex-col panel */}
+                        {!loading && deal && (
+                            <div className="p-4 border-t border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/80 flex-shrink-0">
+                                {deal.status === 'open' ? (
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => handleUpdateStatus('won')}
+                                            disabled={statusLoading}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-50"
+                                        >
+                                            {statusLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trophy className="w-4 h-4" />}
+                                            Marcar como Ganho
+                                        </button>
+                                        <button
+                                            onClick={() => handleUpdateStatus('lost')}
+                                            disabled={statusLoading}
+                                            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white font-semibold rounded-xl text-sm transition-colors disabled:opacity-50"
+                                        >
+                                            {statusLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <XCircle className="w-4 h-4" />}
+                                            Marcar como Perdido
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex items-center justify-between">
+                                        <span className={`flex items-center gap-2 font-bold text-sm ${
+                                            deal.status === 'won' ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'
+                                        }`}>
+                                            {deal.status === 'won' ? <Trophy className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                                            {deal.status === 'won' ? 'Neg\u00f3cio Ganho!' : 'Neg\u00f3cio Perdido'}
+                                        </span>
+                                        <button
+                                            onClick={() => handleUpdateStatus('open')}
+                                            disabled={statusLoading}
+                                            className="flex items-center gap-1.5 px-3 py-2 bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300 font-medium rounded-lg text-xs transition-colors"
+                                        >
+                                            <RotateCcw className="w-3.5 h-3.5" /> Reabrir Neg\u00f3cio
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                     </div>
                 </div>
             </div>

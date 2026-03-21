@@ -141,6 +141,25 @@ class CrmController extends Controller
         return redirect()->back()->with('success', 'Negociação movida com sucesso!');
     }
 
+    public function updateStatus(Request $request, Deal $deal)
+    {
+        $request->validate([
+            'status' => 'required|in:open,won,lost'
+        ]);
+
+        $deal->update(['status' => $request->status]);
+
+        // Fire automation trigger if deal was closed
+        if (in_array($request->status, ['won', 'lost'])) {
+            event(new \App\Events\TriggerAutomationEvent('deal_closed', [
+                'deal_id' => $deal->id,
+                'status'  => $request->status,
+            ]));
+        }
+
+        return redirect()->back()->with('success', 'Negociação atualizada com sucesso!');
+    }
+
     public function show(Deal $deal)
     {
         // Load deep relationships for the side panel Details View

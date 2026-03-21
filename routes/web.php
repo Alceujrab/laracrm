@@ -60,6 +60,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/crm', [CrmController::class, 'index'])->name('crm.index');
     Route::post('/crm/deals', [CrmController::class, 'store'])->name('crm.deals.store');
     Route::put('/crm/deals/{deal}/move', [CrmController::class, 'moveDeal'])->name('crm.deals.move');
+    Route::patch('/crm/deals/{deal}/status', [CrmController::class, 'updateStatus'])->name('crm.deals.status');
     Route::get('/api/crm/deals/{deal}', [CrmController::class, 'show'])->name('api.crm.deals.show');
     Route::post('/api/crm/deals/{deal}/tasks', [TaskController::class, 'store'])->name('api.tasks.store');
     
