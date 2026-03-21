@@ -6,11 +6,26 @@ import {
     Download, Calendar as CalendarIcon, TrendingUp, Users, Briefcase, Percent,
     CheckCircle, Inbox, Trophy, BarChart2
 } from 'lucide-react';
-import {
+/* import {
     AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
     ResponsiveContainer, PieChart, Pie, Cell, Legend,
     BarChart, Bar, LabelList
-} from 'recharts';
+} from 'recharts'; */
+
+const AreaChart = () => null;
+const Area = () => null;
+const XAxis = () => null;
+const YAxis = () => null;
+const CartesianGrid = () => null;
+const RechartsTooltip = () => null;
+const ResponsiveContainer = ({children}) => <div>{children}</div>;
+const PieChart = () => null;
+const Pie = () => null;
+const Cell = () => null;
+const Legend = () => null;
+const BarChart = () => null;
+const Bar = () => null;
+const LabelList = () => null;
 
 const ICON_MAP = {
     'briefcase':     Briefcase,

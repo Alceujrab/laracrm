@@ -46,6 +46,8 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     // Novas features state
     const [isInternalNote, setIsInternalNote] = useState(false);
     const [filter, setFilter] = useState('all'); // all, mine, unassigned, waiting
+    const [channelFilter, setChannelFilter] = useState('all'); // all, whatsapp, instagram, messenger
+    const [statusFilter, setStatusFilter] = useState('open'); // open, resolved, all
     const [isCreateDealModalOpen, setIsCreateDealModalOpen] = useState(false);
     const [newTag, setNewTag] = useState('');
 
@@ -309,9 +311,21 @@ export default function InboxIndex({ conversations: initialConversations = [], u
     };
 
     const filteredConversations = conversations.filter(c => {
-        if (filter === 'mine') return c.assigned_to === auth.user.id;
-        if (filter === 'unassigned') return !c.assigned_to;
-        return true; // all
+        // 1. Atribuição
+        if (filter === 'mine') { if (c.assigned_to !== auth.user.id) return false; }
+        else if (filter === 'unassigned') { if (c.assigned_to) return false; }
+
+        // 2. Status
+        if (statusFilter !== 'all') {
+            if (c.status !== statusFilter) return false;
+        }
+
+        // 3. Canal
+        if (channelFilter !== 'all') {
+            if (c.channel?.type !== channelFilter) return false;
+        }
+
+        return true;
     });
 
     const activeConv = conversations.find(c => c.id === activeConvId) || filteredConversations[0];
@@ -400,11 +414,43 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                             </div>
                         </div>
 
-                        {/* Filtros */}
-                        <div className="flex space-x-1 overflow-x-auto pb-3 scrollbar-hide">
-                            <button onClick={() => setFilter('all')} className={`whitespace-nowrap px-3 py-1 text-xs font-medium rounded-full transition-colors ${filter === 'all' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}>Tudo</button>
-                            <button onClick={() => setFilter('mine')} className={`whitespace-nowrap px-3 py-1 text-xs font-medium rounded-full transition-colors ${filter === 'mine' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}>Meus</button>
-                            <button onClick={() => setFilter('unassigned')} className={`whitespace-nowrap px-3 py-1 text-xs font-medium rounded-full transition-colors ${filter === 'unassigned' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-400' : 'bg-gray-100 text-gray-600 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}>Aguardando</button>
+                        {/* Filtros de Atribuição e Status */}
+                        <div className="flex flex-col space-y-3 mb-4">
+                            <div className="flex space-x-1 overflow-x-auto pb-1 scrollbar-hide">
+                                <button onClick={() => setFilter('all')} className={`whitespace-nowrap px-3 py-1 text-[10px] uppercase font-bold rounded-md transition-colors ${filter === 'all' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}>Tudo</button>
+                                <button onClick={() => setFilter('mine')} className={`whitespace-nowrap px-3 py-1 text-[10px] uppercase font-bold rounded-md transition-colors ${filter === 'mine' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}>Meus</button>
+                                <button onClick={() => setFilter('unassigned')} className={`whitespace-nowrap px-3 py-1 text-[10px] uppercase font-bold rounded-md transition-colors ${filter === 'unassigned' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-gray-100 text-gray-500 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-400'}`}>Fila</button>
+                            </div>
+
+                            <div className="flex items-center justify-between">
+                                <div className="flex bg-gray-100 dark:bg-gray-800 p-0.5 rounded-lg border border-gray-200 dark:border-gray-700">
+                                    <button onClick={() => setStatusFilter('open')} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${statusFilter === 'open' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-400'}`}>ABERTOS</button>
+                                    <button onClick={() => setStatusFilter('resolved')} className={`px-2 py-1 text-[10px] font-bold rounded-md transition-all ${statusFilter === 'resolved' ? 'bg-white dark:bg-gray-700 text-indigo-600 dark:text-indigo-400 shadow-sm' : 'text-gray-400'}`}>RESOLVIDOS</button>
+                                </div>
+                                <div className="flex space-x-2">
+                                    <button 
+                                        onClick={() => setChannelFilter('all')}
+                                        className={`p-1.5 rounded-lg transition-all ${channelFilter === 'all' ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900 border border-indigo-200' : 'text-gray-400 opacity-50 hover:opacity-100'}`}
+                                        title="Todos os Canais"
+                                    >
+                                        <Inbox className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => setChannelFilter('whatsapp')}
+                                        className={`p-1.5 rounded-lg transition-all ${channelFilter === 'whatsapp' ? 'bg-green-100 text-green-600 dark:bg-green-900 border border-green-200' : 'text-gray-400 opacity-50 hover:opacity-100'}`}
+                                        title="WhatsApp"
+                                    >
+                                        <MessageSquare className="w-4 h-4" />
+                                    </button>
+                                    <button 
+                                        onClick={() => setChannelFilter('instagram')}
+                                        className={`p-1.5 rounded-lg transition-all ${channelFilter === 'instagram' ? 'bg-pink-100 text-pink-600 dark:bg-pink-900 border border-pink-200' : 'text-gray-400 opacity-50 hover:opacity-100'}`}
+                                        title="Instagram"
+                                    >
+                                        <AtSign className="w-4 h-4" />
+                                    </button>
+                                </div>
+                            </div>
                         </div>
 
                         <div className="relative">
