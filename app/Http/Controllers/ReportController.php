@@ -110,14 +110,21 @@ class ReportController extends Controller
             ->get()
             ->toArray();
 
-        // 8. Overall Avg Response Time (minutes)
-        $avgResponseMinutes = DB::table('conversations')
-            ->join('messages', 'messages.conversation_id', '=', 'conversations.id')
-            ->where('messages.sender_type', 'user')
-            ->select(DB::raw('AVG(TIMESTAMPDIFF(MINUTE, conversations.created_at, messages.created_at)) as avg_time'))
-            ->whereRaw('messages.id = (SELECT MIN(id) FROM messages m2 WHERE m2.conversation_id = conversations.id AND m2.sender_type = "user")')
-            ->value('avg_time');
+        // 8. TMR (Time-to-First-Response) calculation — Optimized with joinSub
+        $firstUserMessagesQuery = DB::table('messages')
+            ->select('conversation_id', DB::raw('MIN(created_at) as first_reply_at'))
+            ->where('sender_type', 'user')
+            ->groupBy('conversation_id');
 
+        $avgResponseData = DB::table('conversations')
+            ->joinSub($firstUserMessagesQuery, 'first_replies', function($join) {
+                $join->on('conversations.id', '=', 'first_replies.conversation_id');
+            })
+            ->where('conversations.created_at', '>=', now()->subDays(15))
+            ->select(DB::raw('AVG(TIMESTAMPDIFF(MINUTE, conversations.created_at, first_replies.first_reply_at)) as avg_time'))
+            ->first();
+
+        $avgResponseMinutes = $avgResponseData ? $avgResponseData->avg_time : null;
         $avgResponseTime = $avgResponseMinutes ? round($avgResponseMinutes) . "m" : "0m";
 
         // 9. Operator leaderboard (Required by frontend)
@@ -128,8 +135,7 @@ class ReportController extends Controller
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('resolved_count')
             ->limit(10)
-            ->get()
-            ->toArray();
+            ->get();
 
         return Inertia::render('Reports/Index', [
             'stats' => [
