@@ -6,21 +6,19 @@ const CreateProposalModal = ({ isOpen, onClose, conversation, onSuccess }) => {
     if (!isOpen) return null;
 
     const [loading, setLoading] = useState(false);
-    const [title, setTitle] = useState(`Proposta para ${conversation.contact.name}`);
-    const [vehicleId, setVehicleId] = useState(conversation.deal?.vehicle_id || '');
+    const [title, setTitle] = useState('');
+    const [vehicleId, setVehicleId] = useState('');
     const [notes, setNotes] = useState('');
     const [validUntil, setValidUntil] = useState('');
     const [items, setItems] = useState([{ description: 'Entrada', value: 0 }]);
     const [vehicles, setVehicles] = useState([]);
 
     useEffect(() => {
-        // Buscar veículos para o select
-        axios.get('/catalog').then(res => {
-            // Como é Inertia, o /catalog retorna a página. 
-            // Vou assumir que temos os veículos passados via props no componente pai ou buscar via API dedicada.
-            // Para simplificar agora, vou buscar da conversa se houver.
-        });
-    }, []);
+        if (isOpen && conversation) {
+            setTitle(`Proposta para ${conversation.contact?.name || 'Cliente'}`);
+            setVehicleId(conversation.deal?.vehicle_id || '');
+        }
+    }, [isOpen, conversation]);
 
     const addItem = () => {
         setItems([...items, { description: '', value: 0 }]);
