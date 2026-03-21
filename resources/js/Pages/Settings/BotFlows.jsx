@@ -3,7 +3,7 @@ import axios from 'axios';
 import { 
     Zap, Bot, User, ArrowDown, Settings2, Plus, 
     Trash2, Save, MessageSquare, ShieldAlert,
-    ChevronDown, ChevronUp
+    ChevronDown, ChevronUp, Loader2
 } from 'lucide-react';
 
 export default function BotFlows() {
