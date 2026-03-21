@@ -14,8 +14,9 @@ import CustomFieldsTab from './CustomFields';
 import QuickRepliesTab from './QuickReplies';
 import OrganizationTab from './Organization';
 import GeneralTab from './General';
+import KnowledgeTab from './Knowledge';
 
-export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles = [] }) {
+export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles = [], knowledgeItems = [] }) {
     const { auth, flash } = usePage().props;
     const { user } = auth;
     const [activeTab, setActiveTab] = useState('canais');
@@ -30,6 +31,7 @@ export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles 
         { label: 'Frases Rápidas', icon: MessageSquareQuote, active: activeTab === 'frases', id: 'frases' },
         { label: 'Automações', icon: Zap, active: activeTab === 'automacoes', id: 'automacoes' },
         { label: 'Bot / Fluxos', icon: Bot, active: activeTab === 'bots', id: 'bots' },
+        { label: 'Treinamento IA', icon: BrainCircuit, active: activeTab === 'treinamento', id: 'treinamento' },
     ];
 
     const [channels, setChannels] = useState([]);
@@ -444,6 +446,7 @@ export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles 
             <Head title={`Configurações - ${activeTab}`} />
 
             {activeTab === 'canais' && renderCanais()}
+            {activeTab === 'treinamento' && <KnowledgeTab knowledgeItems={knowledgeItems} />}
             {activeTab === 'bots' && renderBotBuilderMockup()}
             {activeTab === 'perfil' && <ProfileTab user={user} />}
             {activeTab === 'geral' && <GeneralTab />}

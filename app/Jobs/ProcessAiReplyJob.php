@@ -57,17 +57,35 @@ class ProcessAiReplyJob implements ShouldQueue
                 $contextText .= "{$role}: {$msg->content}\n";
             }
 
-            $userPrompt = "Aqui está o histórico das últimas mensagens com o cliente (incluindo a última recebida agora):\n\n" . 
-                          $contextText . 
-                          "\nBaseado neste histórico, crie a próxima resposta para o cliente.";
+            // 2. Buscar Conhecimento Adicional (FAQ)
+            $knowledge = \App\Models\KnowledgeItem::where('is_active', true)->get();
+            $knowledgeText = "BA SE DE CONHECIMENTO DISPONÍVEL:\n";
+            foreach ($knowledge as $item) {
+                $knowledgeText .= "- Pergunta/Tópico: {$item->question}\n  Resposta: {$item->answer}\n";
+            }
+
+            // 3. Buscar Estoque de Veículos (Top 15 disponíveis para contexto)
+            $vehicles = \App\Models\Vehicle::where('status', 'available')
+                            ->orderBy('updated_at', 'desc')
+                            ->take(15)
+                            ->get();
+            $stockText = "ESTOQUE DE VEÍCULOS NO MOMENTO:\n";
+            foreach ($vehicles as $v) {
+                $price = $v->price ? "R$ " . number_format($v->price, 2, ',', '.') : "Sob consulta";
+                $stockText .= "- {$v->make} {$v->model} {$v->year} | Preço: {$price} | KM: " . number_format($v->km, 0, ',', '.') . "\n";
+            }
+
+            $userPrompt = "CONTEXTO DO NEGÓCIO:\n" . $knowledgeText . "\n" . $stockText . "\n" .
+                          "HISTÓRICO DA CONVERSA:\n" . $contextText . 
+                          "\nINSTRUÇÃO: Baseado no contexto do negócio e nas informações de estoque acima, responda ao cliente de forma natural, consultiva e educada. Se não souber a resposta ou se o cliente quiser falar com um humano, diga que vai chamar um atendente.";
 
             // Injeta o Horário Local do Servidor Invisivelmente
             $currentTimeContext = "[MENSAGEM DE SISTEMA: A hora atual exata é " . now()->format('H:i') . 
                                   " do dia " . now()->format('d/m/Y') . " (" . now()->locale('pt_BR')->translatedFormat('l') . ")." . 
-                                  " Use esta informação para guiar suas decisões caso o cliente pergunte de horário ou caso sua regra de negócio limite o horário de atendimento.]\n\n";
+                                  " Use esta informação para guiar suas decisões.]\n\n";
 
-            // Instrukções Dinâmicas do Canal
-            $systemInstructions = $currentTimeContext . ($channel->ai_prompt ?? "Você é um assistente virtual atencioso.");
+            // Instruções Dinâmicas do Canal
+            $systemInstructions = $currentTimeContext . ($channel->ai_prompt ?? "Você é um consultor de vendas automotivas atencioso. Use o conhecimento fornecido para ajudar o cliente.");
 
             // 2. Chamar a IA (Laravel AI 0.3x)
             $agent = AnonymousAgent::make($systemInstructions, [], []);

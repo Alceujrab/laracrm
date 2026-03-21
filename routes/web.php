@@ -6,6 +6,7 @@ use App\Http\Controllers\CrmController;
 use App\Http\Controllers\VehicleController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\ProposalController;
+use App\Http\Controllers\KnowledgeItemController;
 use App\Http\Controllers\TaskController;
 use App\Http\Controllers\DealStageController;
 use App\Http\Controllers\EvolutionWebhookController;
@@ -88,6 +89,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/api/proposals', [ProposalController::class, 'store'])->name('proposals.store');
     Route::get('/proposals/{proposal}/download', [ProposalController::class, 'downloadPdf'])->name('proposals.download');
 
+    // Bot Knowledge Base
+    Route::get('/settings/knowledge', [KnowledgeItemController::class, 'index'])->name('settings.knowledge.index');
+    Route::post('/settings/knowledge', [KnowledgeItemController::class, 'store'])->name('settings.knowledge.store');
+    Route::delete('/settings/knowledge/{id}', [KnowledgeItemController::class, 'destroy'])->name('settings.knowledge.destroy');
+
     // --- ROTAS ADMINISTRATIVAS (Somente Admin) ---
     Route::middleware(['role:admin'])->group(function () {
         Route::get('/settings', function () {
@@ -100,6 +106,7 @@ Route::middleware(['auth'])->group(function () {
                 'orgUsers'  => $users,
                 'orgGroups' => $groups,
                 'orgRoles'  => $roles,
+                'knowledgeItems' => \App\Models\KnowledgeItem::all()
             ]);
         })->name('settings.index');
 
