@@ -111,12 +111,28 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/api/automations/{automation}', [\App\Http\Controllers\AutomationController::class, 'update']);
         Route::delete('/api/automations/{automation}', [\App\Http\Controllers\AutomationController::class, 'destroy']);
         Route::post('/api/automations/{automation}/toggle', [\App\Http\Controllers\AutomationController::class, 'toggle']);
+
+        // Custom Fields API (admin-only CRUD)
+        Route::apiResource('/api/custom-fields', \App\Http\Controllers\CustomFieldController::class)->except(['show']);
+        Route::get('/api/custom-fields/values', [\App\Http\Controllers\CustomFieldController::class, 'getValues'])->name('custom-fields.values');
+        Route::post('/api/custom-fields/values', [\App\Http\Controllers\CustomFieldController::class, 'saveValues'])->name('custom-fields.values.save');
     });
 });
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    // Profile Settings (available to all authenticated users)
+    Route::patch('/settings/profile', [\App\Http\Controllers\ProfileSettingsController::class, 'update'])->name('settings.profile.update');
+    Route::post('/settings/profile/avatar', [\App\Http\Controllers\ProfileSettingsController::class, 'updateAvatar'])->name('settings.profile.avatar');
+    Route::patch('/settings/profile/password', [\App\Http\Controllers\ProfileSettingsController::class, 'updatePassword'])->name('settings.profile.password');
+
+    // Quick Replies API (all authenticated users)
+    Route::get('/api/quick-replies', [\App\Http\Controllers\QuickReplyController::class, 'index'])->name('quick-replies.index');
+    Route::post('/api/quick-replies', [\App\Http\Controllers\QuickReplyController::class, 'store'])->name('quick-replies.store');
+    Route::put('/api/quick-replies/{quickReply}', [\App\Http\Controllers\QuickReplyController::class, 'update'])->name('quick-replies.update');
+    Route::delete('/api/quick-replies/{quickReply}', [\App\Http\Controllers\QuickReplyController::class, 'destroy'])->name('quick-replies.destroy');
 });
 
 require __DIR__.'/auth.php';

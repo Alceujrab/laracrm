@@ -9,6 +9,9 @@ import {
     BrainCircuit
 } from 'lucide-react';
 import AutomationsSettings from './Automations';
+import ProfileTab from './Profile';
+import CustomFieldsTab from './CustomFields';
+import QuickRepliesTab from './QuickReplies';
 
 export default function SettingsIndex() {
     const { user } = usePage().props.auth;
@@ -439,13 +442,13 @@ export default function SettingsIndex() {
 
             {activeTab === 'canais' && renderCanais()}
             {activeTab === 'bots' && renderBotBuilderMockup()}
-            {activeTab === 'perfil' && renderPlaceholder('Perfil do Usuário Logado', 'Gerenciamento de Avatar, Nome, E-mail, Senha e seletor global do Tema (Light / Dark).')}
+            {activeTab === 'perfil' && <ProfileTab user={user} />}
             {activeTab === 'geral' && renderPlaceholder('Configurações Gerais', 'Upload da Logo, Fuso Horário, e Moeda Oficial do ambiente.')}
             {activeTab === 'membros' && renderPlaceholder('Gerenciamento de Equipe', 'Tabela de agentes e botão Cadastrar Operador.')}
             {activeTab === 'permissoes' && renderPlaceholder('Permissões RBAC', 'Toggles lógicos sobre restrições de Caixa de Entrada e Negócios.')}
             {activeTab === 'grupos' && renderPlaceholder('Grupos de Departamentos', 'Vendas / Suporte / Onboarding para roteamento.')}
-            {activeTab === 'campos' && renderPlaceholder('Campos Personalizados', 'Construtor DropDown de metadados extra no BD.')}
-            {activeTab === 'frases' && renderPlaceholder('Frases Rápidas (Macros)', 'CRUD ativado p/ digitação / no chat com suporte text-rico e variáveis.')}
+            {activeTab === 'campos' && <CustomFieldsTab />}
+            {activeTab === 'frases' && <QuickRepliesTab />}
             {activeTab === 'automacoes' && <AutomationsSettings />}
         </AuthenticatedLayout>
     );

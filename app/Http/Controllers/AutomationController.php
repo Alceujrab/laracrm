@@ -3,13 +3,32 @@
 namespace App\Http\Controllers;
 
 use App\Models\Automation;
+use App\Models\User;
+use App\Models\DealStage;
 use Illuminate\Http\Request;
 
 class AutomationController extends Controller
 {
     public function index()
     {
-        return response()->json(Automation::orderBy('priority', 'desc')->get());
+        $automations = Automation::orderBy('priority', 'desc')->get();
+
+        // Load support data for frontend dropdowns
+        $users  = User::select('id', 'name')->orderBy('name')->get();
+        $stages = DealStage::select('id', 'name', 'color')->orderBy('order')->get();
+
+        // Groups may not exist – soft-check
+        $groups = [];
+        if (class_exists(\App\Models\Group::class)) {
+            $groups = \App\Models\Group::select('id', 'name')->orderBy('name')->get();
+        }
+
+        return response()->json([
+            'automations' => $automations,
+            'users'       => $users,
+            'groups'      => $groups,
+            'stages'      => $stages,
+        ]);
     }
 
     public function store(Request $request)

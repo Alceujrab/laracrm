@@ -66,19 +66,25 @@ class AutomationActionService
                                 $conv->contact->phone,
                                 $payload['message']
                             );
-                            
-                            // Registra no CRM
                             $message = \App\Models\Message::create([
                                 'conversation_id' => $conv->id,
-                                'sender_type' => 'user', // Bot da automação agindo como staff
-                                'content' => $payload['message'],
-                                'type' => 'text'
+                                'sender_type'     => 'user',
+                                'content'         => $payload['message'],
+                                'type'            => 'text'
                             ]);
                             broadcast(new \App\Events\NewMessageReceived($message));
                         }
                     }
                     break;
-                    // TODO: Implementar quando houver o sistema de Tags
+
+                case 'change_deal_stage':
+                    if (isset($context['deal_id']) && isset($payload['stage_id'])) {
+                        $deal = Deal::find($context['deal_id']);
+                        if ($deal && $deal->deal_stage_id != $payload['stage_id']) {
+                            $deal->update(['deal_stage_id' => $payload['stage_id']]);
+                            Log::info("Automation moved deal #{$deal->id} to stage {$payload['stage_id']}");
+                        }
+                    }
                     break;
             }
         } catch (\Exception $e) {
