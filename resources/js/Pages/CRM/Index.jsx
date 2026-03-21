@@ -13,12 +13,14 @@ import CreateDealModal from '@/Components/Deal/CreateDealModal';
 import ConfiguracoesFunil from './Tabs/ConfiguracoesFunil';
 import Sortable from 'sortablejs';
 
-export default function CRMIndex({ stages = [], contacts = [], filters = {} }) {
+export default function CRMIndex({ stages = [], contacts = [], filters = {}, closedDeals = [], closedStats = {} }) {
     const [activeTab, setActiveTab] = useState('negociacoes');
     const [selectedDealId, setSelectedDealId] = useState(null);
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [searchTerm, setSearchTerm] = useState(filters.search || '');
     const [errorToast, setErrorToast] = useState(null);
+    const [closedFilter, setClosedFilter] = useState('all'); // all, won, lost
+    const [closedSearch, setClosedSearch] = useState('');
     const containerRefs = useRef([]);
     const sortablesRefs = useRef([]);
 
@@ -231,16 +233,183 @@ export default function CRMIndex({ stages = [], contacts = [], filters = {} }) {
         <ConfiguracoesFunil stages={stages} />
     );
 
+    const renderGanhos = () => {
+        const fmt = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v || 0);
+        const { wonTotal = 0, lostTotal = 0, wonCount = 0, lostCount = 0, winRate = 0 } = closedStats;
+        
+        const filtered = closedDeals
+            .filter(d => closedFilter === 'all' || d.status === closedFilter)
+            .filter(d => {
+                if (!closedSearch) return true;
+                const term = closedSearch.toLowerCase();
+                return (
+                    (d.title || '').toLowerCase().includes(term) ||
+                    (d.contact?.name || '').toLowerCase().includes(term) ||
+                    (d.vehicle ? `${d.vehicle.make} ${d.vehicle.model}`.toLowerCase().includes(term) : false)
+                );
+            });
+
+        return (
+            <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950">
+                {/* Header */}
+                <div className="px-8 py-5 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 flex justify-between items-center shadow-sm">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Negócios Encerrados</h1>
+                        <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Histórico de negociações ganhas e perdidas.</p>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-2.5 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar negócio ou contato..."
+                                className="pl-9 pr-4 py-2 bg-gray-100 dark:bg-gray-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 w-56 dark:text-gray-200"
+                                value={closedSearch}
+                                onChange={e => setClosedSearch(e.target.value)}
+                            />
+                        </div>
+                        <div className="flex rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden text-sm bg-white dark:bg-gray-800">
+                            {[['all', 'Todos'], ['won', '🏆 Ganhos'], ['lost', '❌ Perdidos']].map(([val, label]) => (
+                                <button
+                                    key={val}
+                                    onClick={() => setClosedFilter(val)}
+                                    className={`px-3 py-1.5 font-medium transition-colors text-xs ${
+                                        closedFilter === val
+                                            ? val === 'won' ? 'bg-green-600 text-white'
+                                              : val === 'lost' ? 'bg-red-500 text-white'
+                                              : 'bg-indigo-600 text-white'
+                                            : 'text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700'
+                                    }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div className="flex-1 overflow-y-auto p-6 xl:p-8 space-y-6">
+                    {/* KPI Cards */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Negócios Ganhos</p>
+                            <p className="text-2xl font-black text-green-600 dark:text-green-400">{wonCount}</p>
+                            <p className="text-xs text-gray-500 mt-1">{fmt(wonTotal)}</p>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Negócios Perdidos</p>
+                            <p className="text-2xl font-black text-red-500 dark:text-red-400">{lostCount}</p>
+                            <p className="text-xs text-gray-500 mt-1">{fmt(lostTotal)}</p>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Taxa de Vitória</p>
+                            <p className={`text-2xl font-black ${winRate >= 50 ? 'text-green-600 dark:text-green-400' : 'text-yellow-600 dark:text-yellow-400'}`}>{winRate}%</p>
+                            <p className="text-xs text-gray-500 mt-1">{wonCount + lostCount} negócios avaliados</p>
+                        </div>
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+                            <p className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Receita Gerada</p>
+                            <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">{fmt(wonTotal)}</p>
+                            <p className="text-xs text-gray-500 mt-1">Total acumulado</p>
+                        </div>
+                    </div>
+
+                    {/* Win Rate Bar */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl p-5 border border-gray-100 dark:border-gray-700 shadow-sm">
+                        <div className="flex justify-between items-baseline mb-3">
+                            <h3 className="font-bold text-gray-800 dark:text-white text-sm">Proporção Ganhos vs. Perdidos</h3>
+                            <span className="text-xs text-gray-500">{wonCount} ganhos · {lostCount} perdidos</span>
+                        </div>
+                        <div className="h-4 rounded-full bg-gray-100 dark:bg-gray-700 overflow-hidden flex">
+                            <div
+                                className="h-full bg-gradient-to-r from-green-400 to-green-600 transition-all duration-700 rounded-l-full"
+                                style={{ width: `${winRate}%` }}
+                            />
+                            <div
+                                className="h-full bg-gradient-to-r from-red-400 to-red-500 transition-all duration-700 rounded-r-full"
+                                style={{ width: `${100 - winRate}%` }}
+                            />
+                        </div>
+                        <div className="flex justify-between mt-2 text-xs text-gray-500">
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-green-500 rounded-full inline-block"/> Ganhos ({winRate}%)</span>
+                            <span className="flex items-center gap-1"><span className="w-2 h-2 bg-red-500 rounded-full inline-block"/> Perdidos ({100 - winRate}%)</span>
+                        </div>
+                    </div>
+
+                    {/* Table */}
+                    <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+                        <div className="px-6 py-4 border-b border-gray-100 dark:border-gray-700 flex items-center justify-between">
+                            <h3 className="font-bold text-gray-800 dark:text-white">Histórico de Negócios</h3>
+                            <span className="text-xs text-gray-500 bg-gray-100 dark:bg-gray-700 px-2 py-1 rounded-full font-medium">{filtered.length} registros</span>
+                        </div>
+                        {filtered.length === 0 ? (
+                            <div className="py-16 text-center text-gray-400 dark:text-gray-500">
+                                <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-gray-200 dark:text-gray-700" />
+                                <p className="font-medium">Nenhum negócio encerrado encontrado.</p>
+                                <p className="text-sm mt-1">Marque negócios como Ganhos ou Perdidos no funil.</p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-sm">
+                                    <thead>
+                                        <tr className="bg-gray-50 dark:bg-gray-900/50 text-left">
+                                            <th className="px-6 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Negócio</th>
+                                            <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Contato</th>
+                                            <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Estágio</th>
+                                            <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Valor</th>
+                                            <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</th>
+                                            <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Responsável</th>
+                                            <th className="px-4 py-3 text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Encerrado em</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-gray-100 dark:divide-gray-700">
+                                        {filtered.map(deal => (
+                                            <tr
+                                                key={deal.id}
+                                                onClick={() => setSelectedDealId(deal.id)}
+                                                className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer transition-colors group"
+                                            >
+                                                <td className="px-6 py-4">
+                                                    <p className="font-semibold text-gray-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                                                        {deal.vehicle ? `${deal.vehicle.make} ${deal.vehicle.model}` : deal.title}
+                                                    </p>
+                                                    {deal.vehicle && <p className="text-xs text-gray-400 mt-0.5">{deal.title}</p>}
+                                                </td>
+                                                <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{deal.contact?.name || '—'}</td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-xs bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 px-2 py-1 rounded-md font-medium">
+                                                        {deal.stage?.name || '—'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 font-bold text-gray-900 dark:text-white">{fmt(deal.value)}</td>
+                                                <td className="px-4 py-4">
+                                                    <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold uppercase ${
+                                                        deal.status === 'won'
+                                                            ? 'bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300'
+                                                            : 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300'
+                                                    }`}>
+                                                        {deal.status === 'won' ? '✓ Ganho' : '✗ Perdido'}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-gray-600 dark:text-gray-400">{deal.assignee?.name || '—'}</td>
+                                                <td className="px-4 py-4 text-gray-500 dark:text-gray-400 text-xs">{deal.closed_at || '—'}</td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     const renderContent = () => {
         switch(activeTab) {
             case 'negociacoes': return renderNegociacoes();
             case 'propostas': return renderPropostas();
             case 'configuracoes': return renderConfiguracoes();
-            case 'ganhos': return (
-                <div className="flex items-center justify-center h-full text-gray-500 p-8">
-                    Módulo de Ganhos / Relatórios (Em breve)
-                </div>
-            );
+            case 'ganhos': return renderGanhos();
             default: return renderNegociacoes();
         }
     };

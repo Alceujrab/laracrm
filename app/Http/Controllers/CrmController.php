@@ -36,11 +36,47 @@ class CrmController extends Controller
         $vehicles = Vehicle::all();
         $contacts = \App\Models\Contact::orderBy('name')->get();
 
+        // Negócios encerrados (ganhos e perdidos) para a aba de Histórico
+        $closedDeals = Deal::whereIn('status', ['won', 'lost'])
+            ->with(['contact', 'vehicle', 'dealStage', 'assignee'])
+            ->orderByDesc('updated_at')
+            ->get()
+            ->map(function($deal) {
+                return [
+                    'id'          => $deal->id,
+                    'title'       => $deal->title,
+                    'value'       => (float) ($deal->value ?? 0),
+                    'status'      => $deal->status,
+                    'contact'     => $deal->contact ? ['id' => $deal->contact->id, 'name' => $deal->contact->name] : null,
+                    'vehicle'     => $deal->vehicle ? ['make' => $deal->vehicle->make, 'model' => $deal->vehicle->model] : null,
+                    'stage'       => $deal->dealStage ? ['name' => $deal->dealStage->name] : null,
+                    'assignee'    => $deal->assignee ? ['name' => $deal->assignee->name] : null,
+                    'closed_at'   => $deal->updated_at?->toDateString(),
+                    'created_at'  => $deal->created_at?->toDateString(),
+                ];
+            });
+
+        // Aggregate stats
+        $wonTotal  = $closedDeals->where('status', 'won')->sum('value');
+        $lostTotal = $closedDeals->where('status', 'lost')->sum('value');
+        $wonCount  = $closedDeals->where('status', 'won')->count();
+        $lostCount = $closedDeals->where('status', 'lost')->count();
+
         return Inertia::render('CRM/Index', [
-            'stages' => $stages,
-            'vehicles' => $vehicles,
-            'contacts' => $contacts,
-            'filters' => $request->only(['search'])
+            'stages'       => $stages,
+            'vehicles'     => $vehicles,
+            'contacts'     => $contacts,
+            'filters'      => $request->only(['search']),
+            'closedDeals'  => $closedDeals,
+            'closedStats'  => [
+                'wonTotal'  => $wonTotal,
+                'lostTotal' => $lostTotal,
+                'wonCount'  => $wonCount,
+                'lostCount' => $lostCount,
+                'winRate'   => ($wonCount + $lostCount) > 0
+                    ? round(($wonCount / ($wonCount + $lostCount)) * 100, 1)
+                    : 0,
+            ],
         ]);
     }
 
