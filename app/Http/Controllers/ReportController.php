@@ -81,11 +81,49 @@ class ReportController extends Controller
             ];
         })->toArray();
 
-        // 6. Operator leaderboard — resolved conversations last 30 days
+        // 6. Operator Productivity — messages and resolutions
+        $operatorProductivity = User::select('users.id', 'users.name')
+            ->leftJoin('messages', function($join) {
+                $join->on('messages.sender_id', '=', 'users.id')
+                     ->where('messages.sender_type', '=', 'user');
+            })
+            ->selectRaw('users.id, users.name, COUNT(DISTINCT messages.id) as messages_count')
+            ->groupBy('users.id', 'users.name')
+            ->get()
+            ->map(function($user) {
+                $resolved = Conversation::where('assigned_to', $user->id)
+                    ->where('status', 'resolved')
+                    ->count();
+                return [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'messages_count' => $user->messages_count,
+                    'resolved_count' => $resolved,
+                ];
+            })->toArray();
+
+        // 7. Attribution — Conversations by Channel
+        $channelStats = DB::table('conversations')
+            ->join('channels', 'channels.id', '=', 'conversations.channel_id')
+            ->select('channels.name', 'channels.type', DB::raw('count(*) as count'))
+            ->groupBy('channels.name', 'channels.type')
+            ->get()
+            ->toArray();
+
+        // 8. Overall Avg Response Time (minutes)
+        $avgResponseMinutes = DB::table('conversations')
+            ->join('messages', 'messages.conversation_id', '=', 'conversations.id')
+            ->where('messages.sender_type', 'user')
+            ->select(DB::raw('AVG(TIMESTAMPDIFF(MINUTE, conversations.created_at, messages.created_at)) as avg_time'))
+            ->whereRaw('messages.id = (SELECT MIN(id) FROM messages m2 WHERE m2.conversation_id = conversations.id AND m2.sender_type = "user")')
+            ->value('avg_time');
+
+        $avgResponseTime = $avgResponseMinutes ? round($avgResponseMinutes) . "m" : "0m";
+
+        // 9. Operator leaderboard (Required by frontend)
         $operatorStats = User::select('users.id', 'users.name')
             ->join('conversations', 'conversations.assigned_to', '=', 'users.id')
             ->where('conversations.status', 'resolved')
-            ->where('conversations.updated_at', '>=', Carbon::now()->subDays(30))
             ->selectRaw('users.id, users.name, COUNT(conversations.id) as resolved_count')
             ->groupBy('users.id', 'users.name')
             ->orderByDesc('resolved_count')
@@ -95,11 +133,14 @@ class ReportController extends Controller
 
         return Inertia::render('Reports/Index', [
             'stats' => [
-                'kpiCards'      => $kpiCards,
-                'timelineData'  => $timelineData,
-                'pieData'       => $pieData,
-                'funnelData'    => $funnelData,
-                'operatorStats' => $operatorStats,
+                'kpiCards'          => $kpiCards,
+                'timelineData'      => $timelineData,
+                'pieData'           => $pieData,
+                'funnelData'        => $funnelData,
+                'operatorStats'     => $operatorStats,
+                'productivity'      => $operatorProductivity,
+                'attribution'       => $channelStats,
+                'avgResponseTime'   => $avgResponseTime
             ]
         ]);
     }

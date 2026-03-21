@@ -14,7 +14,11 @@ export default defineConfig({
     resolve: {
         alias: {
             '@': path.resolve(__dirname, 'resources/js'),
-            '@babel/runtime': path.resolve(__dirname, 'node_modules/@babel/runtime'),
+        },
+    },
+    build: {
+        commonjsOptions: {
+            transformMixedEsModules: true,
         },
     },
 });

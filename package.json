@@ -28,7 +28,7 @@
         "d3-shape": "^3.2.0",
         "immer": "^11.1.4",
         "lucide-react": "^0.577.0",
-        "recharts": "^2.15.4",
+        "recharts": "^2.12.7",
         "sortablejs": "^1.15.7",
         "victory-vendor": "^37.3.6"
     }

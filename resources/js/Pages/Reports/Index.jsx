@@ -310,6 +310,94 @@ export default function ReportsIndex({ stats = {} }) {
         </div>
     );
 
+    const renderProdutividade = () => (
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 p-6 xl:p-8 space-y-6 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Produtividade da Equipe</h1>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">Desempenho individual e tempo de resposta.</p>
+                </div>
+                <div className="bg-white dark:bg-gray-800 px-4 py-2 rounded-xl border border-gray-100 dark:border-gray-700 shadow-sm">
+                    <p className="text-xs font-bold text-gray-400 uppercase">TMR Médio Global</p>
+                    <p className="text-xl font-bold text-indigo-600 dark:text-indigo-400">{stats.avgResponseTime || '---'}</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-6">Mensagens Enviadas vs Resoluções</h3>
+                    <ResponsiveContainer width="100%" height={350}>
+                        <BarChart data={stats.productivity}>
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" className="dark:stroke-gray-700" />
+                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                            <RechartsTooltip content={<CustomTooltip />} cursor={{ fill: '#f3f4f6', opacity: 0.4 }} />
+                            <Legend />
+                            <Bar dataKey="messages_count" name="Mensagens" fill="#6366F1" radius={[4, 4, 0, 0]} />
+                            <Bar dataKey="resolved_count" name="Resoluções" fill="#10B981" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                    </ResponsiveContainer>
+                </div>
+            </div>
+        </div>
+    );
+
+    const renderAtribuicao = () => (
+        <div className="flex flex-col h-full bg-gray-50 dark:bg-gray-950 p-6 xl:p-8 space-y-6 overflow-y-auto">
+            <div className="mb-4">
+                <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Canais e Atribuição</h1>
+                <p className="text-sm text-gray-500 dark:text-gray-400">Origem das conversas e volume por plataforma.</p>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-6">Distribuição por Canal</h3>
+                    <ResponsiveContainer width="100%" height={300}>
+                        <PieChart>
+                            <Pie
+                                data={stats.attribution}
+                                innerRadius={70}
+                                outerRadius={100}
+                                paddingAngle={5}
+                                dataKey="count"
+                                nameKey="name"
+                            >
+                                {stats.attribution?.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={['#6366F1', '#10B981', '#F59E0B', '#F43F5E'][index % 4]} />
+                                ))}
+                            </Pie>
+                            <RechartsTooltip />
+                            <Legend />
+                        </PieChart>
+                    </ResponsiveContainer>
+                </div>
+
+                <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 shadow-sm p-6">
+                    <h3 className="font-bold text-gray-900 dark:text-white mb-4">Volume por Canal</h3>
+                    <div className="space-y-4">
+                        {stats.attribution?.map((channel, i) => (
+                            <div key={i} className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-900/50 rounded-xl border border-gray-100 dark:border-gray-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-900/30 flex items-center justify-center text-indigo-600 font-bold uppercase">
+                                        {channel.type?.charAt(0) || 'C'}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-gray-900 dark:text-white">{channel.name}</p>
+                                        <p className="text-xs text-gray-500 uppercase">{channel.type}</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-xl font-bold text-gray-900 dark:text-white">{channel.count}</p>
+                                    <p className="text-xs text-gray-400">conversas</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+
     return (
         <AuthenticatedLayout
             activeModule="reports"
@@ -317,13 +405,19 @@ export default function ReportsIndex({ stats = {} }) {
         >
             <Head title={`Relatórios - ${activeTab}`} />
 
-            {activeTab === 'dashboards' ? renderDashboards() : (
-                <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-gray-50 dark:bg-gray-950">
-                    <BarChart2 className="w-14 h-14 text-gray-200 dark:text-gray-700 mb-4" />
-                    <h2 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">Módulo em Construção</h2>
-                    <p className="text-gray-400 dark:text-gray-500 max-w-xs">O painel de <strong>{activeTab}</strong> estará disponível em breve.</p>
-                </div>
-            )}
+            <div className="flex-1 overflow-hidden h-full">
+                {activeTab === 'dashboards' && renderDashboards()}
+                {activeTab === 'produtividade' && renderProdutividade()}
+                {activeTab === 'atribuicao' && renderAtribuicao()}
+                
+                {['dashboards', 'produtividade', 'atribuicao'].indexOf(activeTab) === -1 && (
+                    <div className="flex flex-col items-center justify-center h-full text-center p-8 bg-gray-50 dark:bg-gray-950">
+                        <BarChart2 className="w-14 h-14 text-gray-200 dark:text-gray-700 mb-4" />
+                        <h2 className="text-xl font-bold text-gray-700 dark:text-gray-300 mb-2">Módulo em Construção</h2>
+                        <p className="text-gray-400 dark:text-gray-500 max-w-xs">O painel de <strong>{activeTab}</strong> estará disponível em breve.</p>
+                    </div>
+                )}
+            </div>
         </AuthenticatedLayout>
     );
 }
