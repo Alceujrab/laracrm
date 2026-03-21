@@ -4,7 +4,7 @@ import {
     Users, ShieldAlert, GitMerge, Plus, Edit, Trash2, X, Check, Shield
 } from 'lucide-react';
 
-export default function OrganizationTab({ users = [], groups = [], roles = [] }) {
+export default function OrganizationTab({ users = [], groups = [], roles = [], flash = {} }) {
     const [activeTab, setActiveTab] = useState('members'); // 'members' | 'groups'
     
     // Form do Membro

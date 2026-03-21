@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout';
 import { Head, usePage } from '@inertiajs/react';
@@ -600,26 +600,7 @@ export default function InboxIndex({ conversations: initialConversations = [], u
                         </div>
 
                         {/* Modais Inline da Toolbar */}
-                        {isMacroOpen && (
-                            <div className="absolute bottom-[90px] left-6 z-50 w-80 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in slide-in-from-bottom-2 fade-in">
-                                <div className="p-3 bg-gray-50 dark:bg-gray-900 border-b border-gray-100 dark:border-gray-700 font-semibold text-sm flex justify-between">
-                                    Respostas Rápidas
-                                    <button onClick={() => setIsMacroOpen(false)} className="text-gray-400"><X className="w-4 h-4"/></button>
-                                </div>
-                                <div className="max-h-64 overflow-y-auto p-2">
-                                    {MACROS.map((m, i) => (
-                                        <button 
-                                            key={i} 
-                                            onClick={() => insertText(m.text)}
-                                            className="w-full text-left p-3 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors border-b border-transparent hover:border-gray-100 dark:hover:border-gray-600 mb-1"
-                                        >
-                                            <p className="font-semibold text-sm text-gray-800 dark:text-gray-200">{m.title}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate mt-0.5">{m.text}</p>
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+
 
                         {isCatalogOpen && (
                             <div className="absolute bottom-[90px] left-20 z-50 w-[400px] sm:w-[500px] bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-in slide-in-from-bottom-2 fade-in">

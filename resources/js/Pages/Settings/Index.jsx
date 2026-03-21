@@ -15,7 +15,8 @@ import QuickRepliesTab from './QuickReplies';
 import OrganizationTab from './Organization';
 
 export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles = [] }) {
-    const { user } = usePage().props.auth;
+    const { auth, flash } = usePage().props;
+    const { user } = auth;
     const [activeTab, setActiveTab] = useState('canais');
 
     // Sidebar Items
@@ -445,7 +446,7 @@ export default function SettingsIndex({ orgUsers = [], orgGroups = [], orgRoles 
             {activeTab === 'bots' && renderBotBuilderMockup()}
             {activeTab === 'perfil' && <ProfileTab user={user} />}
             {activeTab === 'geral' && renderPlaceholder('Configurações Gerais', 'Upload da Logo, Fuso Horário, e Moeda Oficial do ambiente.')}
-            {activeTab === 'org' && <OrganizationTab users={orgUsers} groups={orgGroups} roles={orgRoles} />}
+            {activeTab === 'org' && <OrganizationTab users={orgUsers} groups={orgGroups} roles={orgRoles} flash={flash} />}
             {activeTab === 'membros' && renderPlaceholder('Gerenciamento de Equipe', 'Tabela de agentes e botão Cadastrar Operador.')}
             {activeTab === 'permissoes' && renderPlaceholder('Permissões RBAC', 'Toggles lógicos sobre restrições de Caixa de Entrada e Negócios.')}
             {activeTab === 'grupos' && renderPlaceholder('Grupos de Departamentos', 'Vendas / Suporte / Onboarding para roteamento.')}
